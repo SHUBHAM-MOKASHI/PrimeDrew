@@ -1,0 +1,213 @@
+/* General Body and Layout Styles */
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #e6f3ff 0%, #ffffff 100%);
+      color: #1f2937;
+      margin: 0;
+      overflow-y: auto;
+    }
+
+    .main-container {
+      position: relative;
+      min-height: 100vh;
+      display: flex;
+      width: 100%;
+      background-image: url('https://www.transparenttextures.com/patterns/cubes.png'); /* subtle pattern */
+    }
+
+    /* Left Branding Pane */
+    .branding-pane {
+      width: 50%;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      background-color: #f0f7ff;
+      border-right: 1px solid #d1e7f7;
+    }
+
+    .branding-content {
+      text-align: center;
+      max-width: 28rem;
+    }
+
+    .branding-content h1 {
+      font-size: 3.5rem;
+      font-weight: 900;
+      letter-spacing: -0.05em;
+      color: #1e40af; /* Dark Blue */
+    }
+
+    .branding-content p {
+      margin-top: 1rem;
+      font-size: 1.25rem;
+      color: #374151;
+    }
+
+    .vehicles-container {
+      margin-top: 3rem;
+      display: flex;
+      justify-content: center;
+      gap: 3rem;
+      color: #6b7280;
+    }
+
+    .vehicle-icon {
+      text-align: center;
+      transition: transform 0.3s ease-in-out, color 0.3s ease-in-out;
+    }
+
+    .vehicle-icon:hover {
+      transform: translateY(-8px) scale(1.05);
+      color: #1e40af; /* Blue hover */
+    }
+
+    /* Right Login Pane */
+    .login-pane {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 3rem 2rem;
+    }
+
+    .login-form-container {
+      width: 100%;
+      max-width: 28rem;
+      margin: 0 auto;
+      background: #ffffff;
+      padding: 2.5rem;
+      border-radius: 1rem;
+      border: 1px solid #e5e7eb;
+      box-shadow: 0 15px 40px rgba(0, 0, 0, 0.08);
+      animation: fadeIn 0.8s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .mobile-header { text-align: center; margin-bottom: 2rem; }
+    .mobile-header h1 { font-size: 2.5rem; font-weight: 900; color: #1e40af; }
+    .mobile-header p { margin-top: 0.5rem; font-size: 1.125rem; color: #6b7280; }
+
+    .login-form-container h2 {
+      font-size: 2rem;
+      font-weight: 700;
+      text-align: center;
+      color: #111827;
+    }
+
+    .login-form-container > p {
+      text-align: center;
+      color: #6b7280;
+      margin-top: 0.5rem;
+      margin-bottom: 2rem;
+    }
+
+    /* Form Elements */
+    form .form-group { margin-bottom: 1.5rem; }
+    label { font-size: 0.875rem; font-weight: 500; color: #374151; }
+
+    input[type="email"], input[type="password"] {
+      width: 100%;
+      background-color: #f9fafb;
+      border: 1px solid #d1d5db;
+      border-radius: 0.5rem;
+      padding: 0.9rem 1rem;
+      color: #111827;
+      margin-top: 0.5rem;
+      box-sizing: border-box;
+      transition: all 0.3s;
+    }
+
+    input::placeholder { color: #9ca3af; }
+    input:focus {
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.4); /* Blue focus */
+      border-color: #3b82f6;
+    }
+
+    .password-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .password-header a {
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #1e40af;
+      text-decoration: none;
+      cursor: pointer;
+    }
+
+    .password-header a:hover {
+      text-decoration: underline;
+      color: #2563eb;
+    }
+
+    /* Buttons */
+    .btn {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      padding: 0.9rem 1rem;
+      border: 1px solid transparent;
+      border-radius: 0.5rem;
+      font-size: 0.875rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .btn-submit {
+      background: linear-gradient(90deg, #3b82f6 0%, #60a5fa 100%); /* Blue */
+      color: #ffffff;
+    }
+
+    .btn-submit:hover {
+      box-shadow: 0 0 15px rgba(59, 130, 246, 0.5);
+      transform: translateY(-2px);
+    }
+
+    /* Divider */
+    .divider { margin: 2rem 0; display: flex; align-items: center; }
+    .divider-line { flex-grow: 1; border-top: 1px solid #e5e7eb; }
+    .divider-text { flex-shrink: 0; margin: 0 1rem; color: #6b7280; font-size: 0.875rem; }
+
+    /* Social Logins */
+    .social-logins { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+    .btn-social {
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      padding: 0.75rem 1rem;
+      border: 1px solid #d1d5db;
+      border-radius: 0.5rem;
+      background-color: #f9fafb;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #111827;
+      cursor: pointer;
+      transition: background-color 0.3s, border-color 0.3s;
+    }
+    .btn-social:hover {
+      background-color: #e0f2fe;
+      border-color: #3b82f6;
+    }
+    .btn-social svg {
+      width: 1.25rem;
+      height: 1.25rem;
+      margin-right: 0.5rem;
+    }
+
+    /* Responsive Design */
+    @media (min-width: 1024px) {
+      .branding-pane { display: flex; }
+      .login-pane { width: 50%; padding: 2rem; }
+      .mobile-header { display: none; }
+    }

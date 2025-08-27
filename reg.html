@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Vehicle Rental — Registration</title>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="reg.css" />
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to main content</a>
+
+  <header class="site-header" role="banner" aria-label="Site header">
+    <h1 class="brand">Vehicle Rental System</h1>
+    <p class="subtitle">Create your account</p>
+  </header>
+
+  <main id="main" class="container" role="main">
+    <form class="form" action="#" method="post" novalidate>
+      <h2 class="form__title">Registration</h2>
+
+      <fieldset class="section">
+        <legend class="section__legend">Account</legend>
+        <div class="grid grid--2">
+          <div class="field">
+            <label for="role" class="label">I am</label>
+            <select id="role" name="role" class="control" required>
+              <option value="" disabled selected>Choose role</option>
+              <option value="renter">Renter</option>
+              <option value="host">Host (list vehicles)</option>
+              <option value="both">Both</option>
+            </select>
+            <p class="hint">Select how you’ll use the platform.</p>
+          </div>
+
+          <div class="field">
+            <label for="email" class="label">Email</label>
+            <input id="email" name="email" class="control" type="email" inputmode="email" autocomplete="email" required />
+            <p class="hint">We’ll send a verification link.</p>
+          </div>
+
+          <div class="field">
+            <label for="password" class="label">Password</label>
+            <input
+              id="password"
+              name="password"
+              class="control"
+              type="password"
+              required
+              minlength="8"
+              pattern="^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[^A-Za-z0-9]).{8,}$"
+              aria-describedby="pwRules"
+              autocomplete="new-password"
+            />
+            <p id="pwRules" class="hint">Min 8 chars with upper, lower, number, symbol.</p>
+          </div>
+
+          <div class="field">
+            <label for="phone" class="label">Phone</label>
+            <input
+              id="phone"
+              name="phone"
+              class="control"
+              type="tel"
+              inputmode="numeric"
+              pattern="^\d{10}$"
+              title="Enter 10 digit mobile number"
+              autocomplete="tel-national"
+              required
+            />
+            <p class="hint">10 digits (India).</p>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset class="section">
+        <legend class="section__legend">Personal details</legend>
+        <div class="grid grid--3">
+          <div class="field">
+            <label for="firstName" class="label">First name</label>
+            <input id="firstName" name="firstName" class="control" type="text" autocomplete="given-name" required />
+          </div>
+
+          <div class="field">
+            <label for="lastName" class="label">Last name</label>
+            <input id="lastName" name="lastName" class="control" type="text" autocomplete="family-name" required />
+          </div>
+
+          <div class="field">
+            <label for="dob" class="label">Date of birth</label>
+            <input id="dob" name="dob" class="control" type="date" required />
+            <p class="hint">You must be 18+ to rent/host.</p>
+          </div>
+        </div>
+
+        <div class="grid grid--2">
+          <div class="field">
+            <label for="address1" class="label">Address line 1</label>
+            <input id="address1" name="address1" class="control" type="text" autocomplete="address-line1" required />
+          </div>
+
+          <div class="field">
+            <label for="address2" class="label">Address line 2 (optional)</label>
+            <input id="address2" name="address2" class="control" type="text" autocomplete="address-line2" />
+          </div>
+
+          <div class="field">
+            <label for="city" class="label">City</label>
+            <input id="city" name="city" class="control" type="text" autocomplete="address-level2" required />
+          </div>
+
+          <div class="field">
+            <label for="state" class="label">State</label>
+            <input id="state" name="state" class="control" type="text" autocomplete="address-level1" required />
+          </div>
+
+          <div class="field">
+            <label for="pincode" class="label">PIN code</label>
+            <input
+              id="pincode"
+              name="pincode"
+              class="control"
+              type="text"
+              inputmode="numeric"
+              pattern="^\d{6}$"
+              title="6 digit PIN code"
+              autocomplete="postal-code"
+              required
+            />
+          </div>
+
+          <div class="field">
+            <label for="identity" class="label">KYC document</label>
+            <select id="identity" name="identity" class="control" required>
+              <option value="" disabled selected>Select document</option>
+              <option value="dl">Driving Licence</option>
+              <option value="passport">Passport</option>
+              <option value="aadhaar">Aadhaar</option>
+              <option value="pan">PAN</option>
+            </select>
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset class="section">
+        <legend class="section__legend">Driving details</legend>
+        <div class="grid grid--3">
+          <div class="field">
+            <label for="dlNumber" class="label">Licence number</label>
+            <input
+              id="dlNumber"
+              name="dlNumber"
+              class="control"
+              type="text"
+              pattern="^[A-Za-z0-9\- ]{8,20}$"
+              title="8–20 characters, letters/numbers/hyphen/space"
+              required
+            />
+          </div>
+
+          <div class="field">
+            <label for="dlExpiry" class="label">Licence expiry</label>
+            <input id="dlExpiry" name="dlExpiry" class="control" type="date" required />
+          </div>
+
+          <div class="field">
+            <label for="experience" class="label">Years of driving</label>
+            <input id="experience" name="experience" class="control" type="number" min="0" max="60" step="1" value="0" />
+          </div>
+        </div>
+      </fieldset>
+
+      <fieldset class="section">
+        <legend class="section__legend">Preferences</legend>
+        <div class="grid grid--2">
+          <div class="field">
+            <span class="label">Transmission</span>
+            <div class="choice-row" role="group" aria-label="Transmission">
+              <label class="choice">
+                <input type="radio" name="transmission" value="any" checked>
+                <span>Any</span>
+              </label>
+              <label class="choice">
+                <input type="radio" name="transmission" value="manual">
+                <span>Manual</span>
+              </label>
+              <label class="choice">
+                <input type="radio" name="transmission" value="automatic">
+                <span>Automatic</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="choice checkbox">
+              <input type="checkbox" name="marketing" value="yes">
+              <span>Send me updates & offers</span>
+            </label>
+          </div>
+        </div>
+      </fieldset>
+
+      <div class="section section--terms">
+        <label class="choice checkbox required">
+          <input type="checkbox" name="terms" required>
+          <span>I agree to the <a href="#" class="link">Terms & Conditions</a> and <a href="#" class="link">Privacy Policy</a>.</span>
+        </label>
+      </div>
+
+      <div class="actions">
+        <button type="submit" class="btn">Create account</button>
+        <button type="reset" class="btn btn--ghost">Reset</button>
+      </div>
+
+      <p class="footnote" aria-live="polite">
+        Note: HTML-only validation is used. Some rules (e.g., age ≥ 18, password confirm) need server-side checks.
+      </p>
+    </form>
+  </main>
+
+  <footer class="site-footer" role="contentinfo">
+    <small>© 2025 Vehicle Rental System</small>
+  </footer>
+</body>
+</html>

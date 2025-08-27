@@ -1,0 +1,695 @@
+@media (max-width:2000px) {
+  .container1 {
+    height: 680px;
+    width: 100%;
+  }
+  .btn {
+    bottom: 4rem;
+  }
+      .hosttext h1 {
+        left: 41rem;
+    }
+  
+}
+@media (max-width: 1525px) {
+  .btn {
+    bottom: 3rem;
+  }
+          .hosttext h1 {
+        left: 41rem;
+    }
+}
+@media (max-width: 1497px) {
+ 
+          .hosttext h1 {
+        left: 40rem;
+    }
+}
+
+@media (max-width: 1290px) {
+  /* .logo-name {
+    margin: 2rem;
+  } */
+  .btn {
+    bottom: -2rem;
+  }
+  .container2 {
+    top: 7rem;
+  }
+  .container3 {
+    top: 7rem;
+  }
+  .hosttext h1 {
+    left: 34rem;
+  }
+}
+
+@media (max-width: 1200px) {
+  .btn {
+    bottom: 7rem;
+  }
+  .container2 {
+    top: 5rem;
+  }
+  .container3 {
+    top: 5rem;
+  }
+  .hosttext h1 {
+    left: 510px;
+  }
+}
+
+@media (max-width: 1130px) {
+  .container1 .slogan-container {
+    bottom: 27rem;
+  }
+  .scootydiv {
+    width: 250px;
+  }
+  .scootydiv .scootyimg {
+    width: 250px;
+    height: 250px;
+  }
+  .scootyimg img {
+    height: 225px;
+  }
+  .bikediv {
+    width: 250px;
+  }
+  .bikediv .bikeimg {
+    width: 250px;
+    height: 250px;
+  }
+  .bikeimg img {
+    height: 225px;
+  }
+  .cardiv {
+    width: 250px;
+  }
+  .cardiv .carimg {
+    width: 250px;
+    height: 250px;
+  }
+  .carimg img {
+    height: 225px;
+  }
+  .hosttext h1 {
+    left: 463px;
+  }
+  .hosttext p {
+    font-size: 1.25rem;
+    margin-top: 0rem;
+  }
+  .hostbtn button {
+    height: 60px;
+  }
+}
+
+@media (max-width: 1024px) {
+  .slogan-container {
+    top: -21rem;
+    left: 5rem;
+  }
+  .container1 {
+    height: 500px;
+  }
+  .btn {
+    top: 29rem;
+  }
+  .scootydiv {
+    width: 225px;
+  }
+  .scootydiv .scootyimg {
+    width: 225px;
+    height: 225px;
+  }
+  .scootyimg img {
+    height: 200px;
+  }
+  .bikediv {
+    width: 225px;
+  }
+  .bikediv .bikeimg {
+    width: 225px;
+    height: 225px;
+  }
+  .bikeimg img {
+    height: 200px;
+  }
+  .cardiv {
+    width: 225px;
+  }
+  .cardiv .carimg {
+    width: 225px;
+    height: 225px;
+  }
+  .carimg img {
+    height: 200px;
+  }
+  .hosttext h1 {
+    left: 414px;
+  }
+  .hosttext p {
+    font-size: 1.25rem;
+    margin-top: 0rem;
+  }
+  .hostbtn button {
+    height: 50px;
+  }
+}
+
+@media (max-width: 900px) {
+  .container1 .slogan {
+    font-size: 2rem;
+  }
+      .container1 {
+        height: 475px;
+    }
+  .btn {
+    bottom: 17rem;
+    right: 6rem;
+  }
+  .btn1 {
+    height: 45px;
+    width: 235px;
+  }
+  .btn2 {
+    height: 45px;
+    width: 235px;
+  }
+  .scootydiv {
+    width: 200px;
+  }
+  .scootydiv .scootyimg {
+    width: 200px;
+    height: 200px;
+  }
+  .scootyimg img {
+    height: 175px;
+  }
+  .bikediv {
+    width: 200px;
+  }
+  .bikediv .bikeimg {
+    width: 200px;
+    height: 200px;
+  }
+  .bikeimg img {
+    height: 175px;
+  }
+  .cardiv {
+    width: 200px;
+  }
+  .cardiv .carimg {
+    width: 200px;
+    height: 200px;
+  }
+  .carimg img {
+    height: 175px;
+  }
+  .container3 {
+    height: 207px;
+  }
+  .container3 .hostimg img {
+    width: 170px;
+    height: 210px;
+  }
+  .hosttext h1 {
+    left: 360px;
+    font-size: 27px;
+  }
+  .hosttext p {
+    font-size: 1.15rem;
+    margin-top: 0rem;
+  }
+}
+
+@media (max-width: 770px) {
+  /* .navbar {
+    height: 65px;
+  } */
+  .slogan-container {
+    top: -5rem;
+    left: 0rem;
+  }
+  .container1 {
+    height: 450px;
+  }
+     .btn {
+        left: 6rem;
+    }
+  .scootydiv {
+    width: 175px;
+  }
+  .scootydiv .scootyimg {
+    width: 175px;
+    height: 175px;
+  }
+  .scootyimg img {
+    height: 150px;
+  }
+  .bikediv {
+    width: 175px;
+  }
+  .bikediv .bikeimg {
+    width: 175px;
+    height: 175px;
+  }
+  .bikeimg img {
+    height: 150px;
+  }
+  .cardiv {
+    width: 175px;
+  }
+  .cardiv .carimg {
+    width: 175px;
+    height: 175px;
+  }
+  .carimg img {
+    height: 150px;
+  }
+  .hosttext h1 {
+    left: 388px;
+    font-size: 25px;
+  }
+  .hosttext p {
+    font-size: 17px;
+    margin-top: 0rem;
+    margin-right: 1rem;
+  }
+      .hostbtn {
+        height: 35px;
+        font-size: 18px;
+        position: absolute;
+        bottom: 2rem;
+        left: 24rem;
+        margin-right: 0;
+    }
+}
+
+@media (max-width: 720px) {
+  /* logo-name {
+    margin: 1rem;
+    font-size: 30px;
+  } */
+  .home {
+    height: 40px;
+    width: 75px;
+    margin-left: 0.5rem;
+    font-size: 15px;
+  }
+  .cont {
+    height: 40px;
+    width: 75px;
+    margin-left: 0.5rem;
+    font-size: 15px;
+  }
+  .about {
+    height: 40px;
+    width: 75px;
+    margin-left: 0.5rem;
+    font-size: 15px;
+  }
+  .container1 {
+    height: 420px;
+  }
+    .btn {
+        left: 6rem;
+    }
+  .btn1 {
+    height: 40px;
+    width: 200px;
+    font-size: 22px;
+  }
+  .btn2 {
+    height: 40px;
+    width: 200px;
+    font-size: 22px;
+  }
+  .scootydiv {
+    width: 150px;
+  }
+  .scootydiv .scootyimg {
+    width: 150px;
+    height: 150px;
+  }
+  .scootyimg img {
+    height: 125px;
+  }
+  .bikediv {
+    width: 150px;
+  }
+  .bikediv .bikeimg {
+    width: 150px;
+    height: 150px;
+  }
+  .bikeimg img {
+    height: 125px;
+  }
+  .cardiv {
+    width: 150px;
+  }
+  .cardiv .carimg {
+    width: 150px;
+    height: 150px;
+  }
+  .carimg img {
+    height: 125px;
+  }
+  .container2 a {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 655px) {
+  .container1 {
+    height: 350px;
+  }
+  .btn {
+    right: 3rem;
+    top: 24rem;
+  }
+  .scootydiv {
+    width: 125px;
+  }
+  .scootydiv .scootyimg {
+    width: 125px;
+    height: 125px;
+  }
+  .scootyimg img {
+    height: 100px;
+  }
+  .bikediv {
+    width: 125px;
+  }
+  .bikediv .bikeimg {
+    width: 125px;
+    height: 125px;
+  }
+  .bikeimg img {
+    height: 100px;
+  }
+  .cardiv {
+    width: 125px;
+  }
+  .cardiv .carimg {
+    width: 125px;
+    height: 125px;
+  }
+  .carimg img {
+    height: 100px;
+  }
+  .hosttext h1 {
+    left: 300px;
+    font-size: 25px;
+  }
+  .container2 a {
+    font-size: 12px;
+  }
+}
+
+@media (max-width: 576px) {
+  /* .logo-name {
+    font-size: 29px;
+  } */
+  /* .pd-logo {
+    height: 36px;
+    width: 80px;
+  } */
+  .home {
+    font-size: 14px;
+  }
+  .cont {
+    font-size: 14px;
+  }
+  .about {
+    font-size: 14px;
+  }
+  .container1 {
+    height: 335px;
+  }
+  .slogan-container {
+    top: -3rem;
+    left: 0rem;
+  }
+  .btn {
+    right: 7rem;
+    top: 22rem;
+    display: grid;
+    grid-template-columns: 1fr;
+    left: 7rem;
+  }
+  .btn1 {
+    width: 20rem;
+  }
+  .btn2 {
+    width: 20rem;
+
+    position: absolute;
+    top: 3rem;
+  }
+  .container2 {
+    top: 5rem;
+    display: grid;
+  }
+  .scootydiv {
+    width: 15rem;
+    height: 15rem;
+  }
+  .scootyimg img {
+    height: 12rem;
+    width: 15rem;
+  }
+  .bikediv {
+    width: 15rem;
+    height: 15rem;
+  }
+  .bikeimg img {
+    height: 12rem;
+    width: 15rem;
+  }
+  .cardiv {
+    width: 15rem;
+    height: 15rem;
+  }
+  .carimg img {
+    height: 12rem;
+    width: 15rem;
+  }
+  .container2 a {
+    font-size: 18px;
+    position: relative;
+    top: 6rem;
+  }
+  .hostbtn {
+    left: 19rem;
+  }
+}
+@media (max-width: 511px) {
+  .container1 {
+    height: 295px;
+  }
+  .btn {
+    right: 8rem;
+    top: 20rem;
+  }
+  .btn1 {
+    width: 15rem;
+    height: 2rem;
+    font-size: 20px;
+  }
+  .btn2 {
+    width: 15rem;
+    height: 2rem;
+    font-size: 20px;
+  }
+  .container3 {
+    height: 30rem;
+  }
+      .hosttext h1 {
+        left: -20px;
+        font-size: 25px;
+        position: relative;
+        top: -16.5rem;
+    }
+  
+     .hostimg {
+        position: relative;
+        left: 10.5rem;
+        margin-left: 0;
+        bottom: 4rem;
+    }
+    .hosttext {
+        position: relative;
+        top: 5rem;
+        right: 5.5rem;
+    }
+  .hostbtn {
+    left: 10rem;
+    margin-right: 0;
+  }
+}
+@media (max-width: 432px) {
+    .container1 {
+        height: 160px;
+    }
+    .btn {
+        right: 8rem;
+        left:6rem;
+        top: 14rem;
+    }
+        .btn2 {
+        width: 15rem;
+        height: 2rem;
+        font-size: 20px;
+        top: 36px;
+    }
+        .hostimg {
+        position: relative;
+        left: 8.5rem;
+        margin-left: 0;
+        bottom: 5rem;
+    }
+        .hostbtn {
+        left: 8rem;
+        margin-right: 0;
+    }
+}
+@media (max-width:415px){
+  .pd-logo {
+    position: relative;
+    right: 2rem;
+}
+.logo-name{
+  font-size: 30px;
+    position: relative;
+    left: -5rem;
+}
+    .btn2 {
+        width: 15rem;
+        height: 2rem;
+        font-size: 20px;
+        top: 36.5px;
+    }
+}
+@media (max-width:397px){
+      .logo-name {
+        font-size: 30px;
+        position: relative;
+        left: -5rem;
+        margin-left: 2rem;
+    }
+  .btn {
+        left: 7rem;
+        top: 14rem;
+    }
+        .btn1 {
+        width: 10rem;
+        height: 2rem;
+        font-size: 15px;
+    }
+          .btn2 {
+        width: 10rem;
+        height: 2rem;
+        font-size: 15px;
+        top: 36.5px;
+    }
+        .hosttext h1 {
+        left: -20px;
+        font-size: 20px;
+        position: relative;
+        top: -16.5rem;
+    }
+        .hosttext p {
+        font-size: 12px;
+        }
+        .hostimg {
+        position: relative;
+        left: 7.5rem;
+        margin-left: 0;
+        bottom: 4rem;
+    }
+        .hostbtn {
+        left: 7rem;
+        margin-right: 0;
+        height: 20px;
+        width: 177px;
+    }
+
+
+}
+@media (max-width:361px){
+    .btn {
+        left: 6rem;
+        top: 14rem;
+    }
+        .btn2 {
+        width: 10rem;
+        height: 2rem;
+        font-size: 15px;
+        top: 38px;
+    }
+        .hosttext h1 {
+        left: -20px;
+        font-size: 17px;
+        position: relative;
+        top: -16.5rem;
+    }
+        .hosttext {
+        position: relative;
+        top: 7rem;
+        right: 6.5rem;
+    }
+        .hostimg {
+        position: relative;
+        left: 5.5rem;
+        margin-left: 0;
+        bottom: 2rem;
+    }
+        .hostbtn {
+        left: 6rem;
+        margin-right: 0;
+        width: 170px;
+    }
+        .hostbtn button {
+        height: 40px;
+        font-size: 17px;
+    }
+        .logo-name {
+        font-size: 30px;
+        position: relative;
+        left: -5rem;
+        margin-left: 4rem;
+    }
+}
+@media (max-width:338px) {
+      .logo-name {
+        font-size: 26px;
+        position: relative;
+        left: -5rem;
+        margin-left: 4rem;
+    }
+    .pd-logo {
+    height: 30px;
+    margin-left: 0.7rem;
+}
+      .btn {
+        left: 5rem;
+        top: 14rem;
+    }
+        .hosttext p {
+        font-size: 9px;
+    }
+        .hosttext {
+        position: relative;
+        top: 7rem;
+        right: 6.5rem;
+    }
+        .hosttext h1 {
+        white-space: nowrap;
+        left: -20px;
+        font-size: 21px;
+        position: relative;
+        top: -16.5rem;
+    }
+}

@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vehicle Rental Registration</title>
+    <link rel="stylesheet" href="registration.css">
+</head>
+<body>
+
+    <div class="container">
+        <h1>Vehicle Rental Registration Form</h1>
+        <p>Please fill out this form to reserve your rental vehicle.</p>
+
+        <form action="/submit-form" method="post" enctype="multipart/form-data">
+
+            <fieldset>
+                <legend>1. Personal Information</legend>
+                <div class="form-group">
+                    <label for="first_name">First Name</label>
+                    <input type="text" id="first_name" name="first_name" required>
+                </div>
+                <div class="form-group">
+                    <label for="last_name">Last Name</label>
+                    <input type="text" id="last_name" name="last_name" required>
+                </div>
+                <div class="form-group">
+                    <label for="dob">Date of Birth</label>
+                    <input type="date" id="dob" name="dob" required>
+                </div>
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input type="email" id="email" name="email" required>
+                </div>
+                <div class="form-group">
+                    <label for="phone">Phone Number</label>
+                    <input type="tel" id="phone" name="phone" placeholder="e.g., (555) 555-5555" required>
+                </div>
+                <div class="form-group">
+                    <label for="address">Street Address</label>
+                    <input type="text" id="address" name="address" required>
+                </div>
+                <div class="form-group">
+                    <label for="city">City</label>
+                    <input type="text" id="city" name="city" required>
+                </div>
+                <div class="form-group">
+                    <label for="pincode">PinCode</label>
+                    <input type="text" id="pincode" name="pincode" required>
+                </div>
+            </fieldset>
+
+            <fieldset>
+                <legend>2. Driver's License Information</legend>
+                <div class="form-group">
+                    <label for="license_number">License Number</label>
+                    <input type="text" id="license_number" name="license_number" required>
+                </div>
+                <div class="form-group">
+                    <label for="issuing_state">Issuing State / Province</label>
+                    <input type="text" id="issuing_state" name="issuing_state" required>
+                </div>
+                <div class="form-group">
+                    <label for="license_exp">Expiration Date</label>
+                    <input type="date" id="license_exp" name="license_exp" required>
+                </div>
+                <div class="form-group">
+                    <label for="license_photo">Upload Driver's License Photo (Front & Back)</label>
+                    <input type="file" id="license_photo" name="license_photo" accept="image/*" multiple required>
+                </div>
+            </fieldset>
+
+            <!-- <fieldset>
+                <legend>3. Rental Details</legend>
+                <div class="form-group">
+                    <label for="vehicle_type">Select Vehicle Type</label>
+                    <select id="vehicle_type" name="vehicle_type" required>
+                        <option value="">-- Please choose an option --</option>
+                        <option value="sedan">Sedan</option>
+                        <option value="suv">SUV</option>
+                        <option value="truck">Truck</option>
+                        <option value="van">Van</option>
+                        <option value="sports">Sports Car</option>
+                         <option value="Royal Enfield Classic 350">Royal Enfield Classic 350</option>
+                         <option value="Yamaha">Yamaha R15</option>
+                         <option value="KTM">KTM Duke 390</option>
+                         <option value="Honada CB350">Honada CB350</option>
+                         <option value="Bajaj Pulsar 150">Bajaj Pulsar 150</option>
+                         <option value="Suzuki Hayabusa">Suzuki Hayabusa</option>
+                         <option value="Jupitar">Jupitar</option>
+                         <option value="van">Van</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="pickup_date">Pickup Date</label>
+                    <input type="date" id="pickup_date" name="pickup_date" required>
+                </div>
+                <div class="form-group">
+                    <label for="return_date">Return Date</label>
+                    <input type="date" id="return_date" name="return_date" required>
+                </div>
+            </fieldset> -->
+
+            <div class="form-group">
+                <input type="checkbox" id="terms" name="terms" required>
+                <label for="terms">I agree to the <a href="#" target="_blank">Terms and Conditions</a></label>
+            </div>
+
+            <button type="submit" class="submit-button">Submit</button>
+
+        </form>
+    </div>
+
+</body>
+</html>

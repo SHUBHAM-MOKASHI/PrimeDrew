@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Login • Blue/Black</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="login2.css" />
+</head>
+<body>
+  <main class="scene">
+    <!-- animated background shapes -->
+    <div class="bg">
+      <span aria-hidden="true" class="orb orb-1"></span>
+      <span aria-hidden="true" class="orb orb-2"></span>
+      <span aria-hidden="true" class="grid"></span>
+      <img src="bg img login.jpg" alt="" height="100%">
+    </div>
+
+    <!-- login card -->
+    <section class="card" role="form" aria-label="Login form">
+      <header class="card__header">
+        <div class="logo" aria-hidden="true">⋄</div>
+        <h1 class="title">Welcome back</h1>
+        <p class="subtitle">Sign in to continue</p>
+      </header>
+
+      <form class="form" action="#" method="post" novalidate>
+        <!-- Email -->
+        <div class="field">
+          <input id="email" class="input" type="email" name="email" required autocomplete="username" />
+          <label for="email" class="label">Email address</label>
+          <span class="field__icon" aria-hidden="true">@</span>
+          <span class="hint" id="emailHint">Use a valid email</span>
+        </div>
+
+        <!-- Password -->
+        <div class="field">
+          <input id="password" class="input" type="password" name="password" required minlength="6" autocomplete="current-password" />
+          <label for="password" class="label">Password</label>
+          <span class="field__icon" aria-hidden="true">••</span>
+          <span class="hint">Min 6 characters</span>
+        </div>
+
+        <!-- Options -->
+        <div class="options">
+          <label class="checkbox">
+            <input type="checkbox" name="remember" />
+            <span>Remember me</span>
+          </label>
+          <a href="#" class="link">Forgot password?</a>
+        </div>
+
+        <!-- Submit -->
+        <button class="btn" type="submit">
+          <span>Sign in</span>
+        </button>
+
+        <!-- Divider -->
+        <div class="divider" role="separator" aria-hidden="true">
+          <span>or</span>
+        </div>
+
+        <!-- Alt action -->
+        <a class="btn btn--outline" href="#">
+          <span>Create an account</span>
+        </a>
+      </form>
+
+      <footer class="card__footer">
+        <small>By continuing you agree to our <a href="#" class="link">Terms</a> & <a href="#" class="link">Privacy</a>.</small>
+      </footer>
+    </section>
+  </main>
+</body>
+</html>
+
+/\/\_/\/\

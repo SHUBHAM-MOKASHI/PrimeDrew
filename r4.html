@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Chat - Travel Community Finder</title>
+<style>
+  body {
+    margin:0; font-family:'Segoe UI',sans-serif;
+    background:url('https://img.freepik.com/free-photo/backpacker-standing-sunrise-viewpoint-ja-bo-village-mae-hong-son-province-thailand_335224-1356.jpg') no-repeat center center fixed;
+    background-size:cover; color:#fff;
+  }
+  body::before { content:""; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(34,49,34,0.7); z-index:0; }
+  .container { position:relative; z-index:1; max-width:600px; margin:auto; padding:2rem; }
+  .chat-box { background:rgba(255,255,255,0.1); padding:1rem; border-radius:10px; height:400px; overflow-y:auto; margin-bottom:1rem; }
+  .msg { background:rgba(255,255,255,0.2); padding:0.6rem; border-radius:6px; margin:0.3rem 0; }
+  .input-row { display:flex; gap:0.5rem; }
+  input { flex:1; padding:0.6rem; border-radius:6px; border:none; }
+  button { background:#3a6b35; border:none; padding:0.7rem 1.2rem; border-radius:6px; color:#fff; cursor:pointer; }
+</style>
+</head>
+<body>
+  <div class="container">
+    <h1>Chat with Admin</h1>
+    <div class="chat-box" id="chatBox"></div>
+    <div class="input-row">
+      <input type="text" id="chatInput" placeholder="Type a message...">
+      <button onclick="sendMsg()">Send</button>
+    </div>
+    <a href="demo2.html" style="color:#fff; display:block; margin-top:1rem;">← Back to Trips</a>
+  </div>
+
+<script>
+function sendMsg(){
+  let input=document.getElementById('chatInput');
+  let text=input.value.trim();
+  if(!text) return;
+  let box=document.getElementById('chatBox');
+  let msg=document.createElement('div');
+  msg.className="msg";
+  msg.innerText="You: "+text;
+  box.appendChild(msg);
+
+  // Fake admin reply
+  setTimeout(()=>{
+    let reply=document.createElement('div');
+    reply.className="msg";
+    reply.innerText="Admin: Got your message - '"+text+"'";
+    box.appendChild(reply);
+    box.scrollTop=box.scrollHeight;
+  },1000);
+
+  input.value="";
+  box.scrollTop=box.scrollHeight;
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Register • Vehicle Rental</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="registration2.css">
+</head>
+<body>
+  <main class="scene">
+    <!-- background effects -->
+    <div class="bg">
+      <span class="orb orb-1"></span>
+      <span class="orb orb-2"></span>
+      <span class="grid"></span>
+    </div>
+
+    <!-- registration form card -->
+    <section class="card">
+      <header class="card__header">
+        <div class="logo">🚗</div>
+        <h1 class="title">Create Account</h1>
+        <p class="subtitle">Join Vehicle Rental System</p>
+      </header>
+
+      <form class="form" action="#" method="post">
+        <!-- Full name -->
+        <div class="field">
+          <input id="fullname" type="text" name="fullname" class="input" placeholder=" " required>
+          <label for="fullname" class="label">Full Name</label>
+          <span class="field__icon">👤</span>
+        </div>
+
+        <!-- Email -->
+        <div class="field">
+          <input id="email" type="email" name="email" class="input" placeholder=" " required>
+          <label for="email" class="label">Email Address</label>
+          <span class="field__icon">@</span>
+        </div>
+
+        <!-- Phone -->
+        <div class="field">
+          <input id="phone" type="tel" name="phone" class="input" placeholder=" " required>
+          <label for="phone" class="label">Phone Number</label>
+          <span class="field__icon">📞</span>
+        </div>
+
+        <!-- Password -->
+        <div class="field">
+          <input id="password" type="password" name="password" class="input" placeholder=" " required minlength="6">
+          <label for="password" class="label">Password</label>
+          <span class="field__icon">🔑</span>
+        </div>
+
+        <!-- Confirm Password -->
+        <div class="field">
+          <input id="confirm" type="password" name="confirm" class="input" placeholder=" " required minlength="6">
+          <label for="confirm" class="label">Confirm Password</label>
+          <span class="field__icon">✔</span>
+        </div>
+
+        <!-- Submit -->
+        <button type="submit" class="btn">Register</button>
+
+        <!-- Already account -->
+        <p class="switch">Already have an account? <a href="login.html" class="link">Login</a></p>
+      </form>
+    </section>
+  </main>
+</body>
+</html>

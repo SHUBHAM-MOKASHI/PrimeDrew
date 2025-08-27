@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Login - Travel Community Finder</title>
+<style>
+  body {
+    margin: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: url('https://img.freepik.com/free-photo/backpacker-standing-sunrise-viewpoint-ja-bo-village-mae-hong-son-province-thailand_335224-1356.jpg') no-repeat center center fixed;
+    background-size: cover;
+    color: #fff;
+  }
+  body::before {
+    content: "";
+    position: fixed; top: 0; left: 0;
+    width: 100%; height: 100%;
+    background: rgba(34, 49, 34, 0.7);
+    z-index: 0;
+  }
+  .container {
+    position: relative; z-index: 1;
+    display: flex; flex-direction: column;
+    justify-content: center; align-items: center;
+    min-height: 100vh;
+  }
+  .form-box {
+    background: rgba(255,255,255,0.1);
+    padding: 2rem; border-radius: 12px;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.5);
+    width: 300px; text-align: center;
+  }
+  input {
+    width: 100%; padding: 0.7rem;
+    margin-bottom: 1rem;
+    border-radius: 8px; border: none;
+  }
+  button {
+    background: #3a6b35; border: none;
+    padding: 0.8rem 2rem; border-radius: 8px;
+    color: #fff; cursor: pointer;
+    width: 100%; font-size: 1rem;
+  }
+  button:hover { background: #548c4d; }
+</style>
+</head>
+<body>
+  <div class="container">
+    <div class="form-box">
+      <h2>Student Login</h2>
+      <input type="text" id="roll" placeholder="Roll Number">
+      <input type="text" id="name" placeholder="Full Name">
+      <input type="text" id="dept" placeholder="Department">
+      <input type="password" id="password" placeholder="Password">
+      <button onclick="login()">Login</button>
+      <p id="msg"></p>
+    </div>
+  </div>
+
+<script>
+function login() {
+  let roll = document.getElementById('roll').value.trim();
+  let name = document.getElementById('name').value.trim();
+  let dept = document.getElementById('dept').value.trim();
+  let pass = document.getElementById('password').value.trim();
+
+  if (roll && name && dept && pass) {
+    // Redirect to trips page after login
+    window.location.href = "r3.html?user=" + encodeURIComponent(name);
+  } else {
+    document.getElementById('msg').innerText = "Please fill all details.";
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Become a Host — Vehicle Rental</title>
+  <link rel="stylesheet" href="hostregistration.css" />
+</head>
+<body>
+  <!-- Accessible Skip Link -->
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="container header-inner">
+      <div class="logo" aria-hidden="true">
+        <!-- Tiny SVG logo -->
+        <svg width="44" height="44" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <rect x="1" y="6" width="22" height="12" rx="2" stroke="currentColor" stroke-width="1.2"/>
+          <circle cx="7" cy="17" r="1.6" fill="currentColor"/>
+          <circle cx="17" cy="17" r="1.6" fill="currentColor"/>
+        </svg>
+      </div>
+
+      <nav aria-label="Primary">
+        <ul class="nav">
+          <li><a href="#">Home</a></li>
+          <li><a href="#">Vehicles</a></li>
+          <li><a href="#" class="btn-ghost" id="become-host-btn">Become a host</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <!-- Banner -->
+    <section class="host-banner" aria-labelledby="banner-title" role="region">
+      <div class="banner-layer layer-bg" aria-hidden="true"></div>
+      <div class="container banner-grid" id="banner" tabindex="0" aria-describedby="banner-desc">
+        <div class="banner-left">
+          <h1 id="banner-title">Earn by Hosting Your Vehicle</h1>
+          <p id="banner-desc">List your car, bike, or scooter in minutes. Smart insurance, verified renters, and 24/7 support.</p>
+
+          <ul class="benefits" aria-hidden="false">
+            <li><strong>Flexible earnings</strong> — you choose availability</li>
+            <li><strong>Owner protection</strong> — optional insurance options</li>
+            <li><strong>Easy payouts</strong> — weekly transfers</li>
+          </ul>
+
+          <div class="cta-row">
+            <button class="btn primary" id="open-host-modal">Get started — it's free</button>
+            <a class="btn subtle" href="#learn-more">Learn more</a>
+          </div>
+
+          <div class="trust-row" aria-hidden="true">
+            <span>Trusted by <strong>12,000+</strong> hosts</span>
+            <div class="rating" aria-hidden="true">★ ★ ★ ★ ☆</div>
+          </div>
+        </div>
+
+        <div class="banner-right" id="banner-visual" aria-hidden="true">
+          <!-- Interactive card with 3D tilt + image layers -->
+          <div class="vehicle-card" data-tilt>
+            <div class="card-sheen"></div>
+            <div class="card-image" aria-hidden="true">
+              <img src="https://images.unsplash.com/photo-1542362567-b07e54358753?w=1200&q=60&auto=format&fit=crop" alt="Vehicle example" loading="lazy">
+            </div>
+            <svg class="card-svg" viewBox="0 0 200 100" preserveAspectRatio="none" aria-hidden="true">
+              <defs>
+                <linearGradient id="g1" x1="0" x2="1">
+                  <stop offset="0" stop-color="rgba(255,255,255,0.18)"/>
+                  <stop offset="1" stop-color="transparent"/>
+                </linearGradient>
+              </defs>
+              <path d="M0,60 C40,10 160,10 200,60 L200,100 L0,100 Z" fill="url(#g1)"/>
+            </svg>
+            <div class="card-meta">
+              <div class="meta-left">
+                <h3>Toyota Innova • ₹1,200/day</h3>
+                <p class="meta-sub">Comfort • 7 seats</p>
+              </div>
+              <div class="meta-action">
+                <button class="btn micro" id="quick-list">Quick list</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Subtle animated waves in background for depth -->
+      <svg class="banner-waves" viewBox="0 0 1440 320" aria-hidden="true">
+        <path d="M0,96L48,117.3C96,139,192,181,288,192C384,203,480,181,576,160C672,139,768,117,864,101.3C960,85,1056,75,1152,90.7C1248,107,1344,149,1392,170.7L1440,192L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z" opacity="0.06" fill="currentColor"></path>
+      </svg>
+    </section>
+
+    <!-- Informational section -->
+    <section id="learn-more" class="info container">
+      <h2>Why host with us?</h2>
+      <p>We optimize bookings, verify renters, and provide secure payout channels. Our dashboard shows earnings estimates, calendar control, and maintenance reminders.</p>
+    </section>
+  </main>
+
+  <!-- Modal: Become a Host -->
+  <div id="host-modal" class="modal" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="modal-title">
+    <div class="modal-panel" role="document">
+      <button class="modal-close" aria-label="Close host form" id="close-modal">&times;</button>
+      <div class="modal-grid">
+        <div class="modal-left">
+          <h2 id="modal-title">List your vehicle</h2>
+          <p class="muted">Enter basic details. We'll guide you through verification & pricing.</p>
+
+          <form id="host-form" autocomplete="on" novalidate>
+            <fieldset>
+              <label for="v-type">Vehicle type</label>
+              <select id="v-type" required>
+                <option value="">Select type</option>
+                <option value="car" >Car</option>
+                <option value="bike">Bike / Scooter</option>
+                <option value="van">Van</option>
+              </select>
+            </fieldset>
+
+            <fieldset>
+              <label for="v-make">Make & Model</label>
+              <input id="v-make" type="text" placeholder="e.g. Toyota Innova 2018" required minlength="3" />
+            </fieldset>
+
+            <fieldset>
+              <label for="v-price">Estimated price (per day)</label>
+              <input id="v-price" type="number" min="100" step="10" placeholder="e.g. 1200" required />
+            </fieldset>
+
+            <fieldset class="upload-field">
+              <label>Upload images (drag & drop)</label>
+              <div class="dropzone" id="dropzone" tabindex="0" aria-label="Drop images here or click to upload">
+                <input id="file-input" type="file" accept="image/*" multiple />
+                <p class="dz-instruct">Drop or click to add images — first image becomes cover</p>
+                <div class="dz-preview" id="dz-preview" aria-live="polite"></div>
+              </div>
+            </fieldset>
+
+            <div class="form-actions">
+              <button class="btn primary" type="submit">Save & Continue</button>
+              <button class="btn ghost" type="button" id="save-draft">Save draft</button>
+            </div>
+
+            <p class="muted small">We store a draft locally — complete listing later. By continuing you agree to <a href="#">terms</a>.</p>
+          </form>
+        </div>
+
+        <aside class="modal-right" aria-hidden="true">
+          <div class="preview-card" id="live-preview">
+            <div class="preview-image" id="preview-image" aria-hidden="true">
+              <span>Cover preview</span>
+            </div>
+            <div class="preview-body">
+              <h3 id="preview-title">Vehicle preview</h3>
+              <p id="preview-sub">Make, model & price will appear here</p>
+              <div class="progress-stats">
+                <div>Profile completeness <strong id="complete-percent">20%</strong></div>
+                <progress id="progress" value="20" max="100">20%</progress>
+              </div>
+            </div>
+          </div>
+
+          <div class="tips">
+            <h4>Quick tips</h4>
+            <ol>
+              <li>Use clear photos from multiple angles.</li>
+              <li>Set a competitive price with availability.</li>
+              <li>Respond quickly to booking requests.</li>
+            </ol>
+          </div>
+        </aside>
+      </div>
+    </div>
+  </div>
+
+  <footer class="site-footer container">
+    <small>© <span id="year"></span> RideShare Rentals — All rights reserved</small>
+  </footer>
+
+  <script src="hostregistration.js"></script>
+</body>
+</html>
