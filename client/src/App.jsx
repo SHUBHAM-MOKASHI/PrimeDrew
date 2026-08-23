@@ -6,7 +6,7 @@ import AuthModal from './components/auth/AuthModal';
 import Home from './pages/Home';
 import VehicleDiscovery from './pages/VehicleDiscovery';
 import VehicleDetailsPage from './pages/VehicleDetailsPage';
-import HostPortal from './pages/HostPortal';
+import HostDashboardPage from './pages/HostDashboardPage';
 import InspectionPage from './pages/InspectionPage';
 
 export function App() {
@@ -20,7 +20,7 @@ export function App() {
               <Route path="/" element={<Home />} />
               <Route path="/vehicles" element={<VehicleDiscovery />} />
               <Route path="/vehicles/:id" element={<VehicleDetailsPage />} />
-              <Route path="/host" element={<HostPortal />} />
+              <Route path="/host" element={<HostDashboardPage />} />
               <Route path="/inspections" element={<InspectionPage />} />
             </Routes>
           </main>
