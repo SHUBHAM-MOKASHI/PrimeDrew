@@ -208,7 +208,7 @@ export const KYCModal = ({ isOpen, onClose }) => {
 
       setMatchScore(score);
 
-      if (isVerified && score >= 55) {
+      if (isVerified && score >= 50) {
         setVerificationSuccess(true);
         updateKycStatus('verified', {
           dlNumber: extractedData.docNumber,
@@ -224,7 +224,7 @@ export const KYCModal = ({ isOpen, onClose }) => {
       } else {
         setVerificationSuccess(false);
         setVerificationError(
-          errorMsg || `Facial match score (${score}%) is below required threshold (55%). Please upload a clear photo ID and retake your selfie.`
+          errorMsg || `Facial match score (${score}%) is below required threshold (50%). Please upload a clear photo ID and retake your selfie.`
         );
       }
     } catch (err) {
