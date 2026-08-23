@@ -210,17 +210,37 @@ export const KYCModal = ({ isOpen, onClose }) => {
 
       if (isVerified && score >= 50) {
         setVerificationSuccess(true);
-        updateKycStatus('verified', {
-          dlNumber: extractedData.docNumber,
-          faceMatchScore: score
-        });
-        updateUser({
-          kyc: {
-            status: 'verified',
+
+        try {
+          const patchRes = await axios.patch(
+            '/api/v1/users/kyc-status',
+            {
+              status: 'verified',
+              similarityScore: score,
+              extractedData
+            },
+            {
+              headers: {
+                Authorization: token ? `Bearer ${token}` : ''
+              }
+            }
+          );
+
+          if (patchRes.data && patchRes.data.user) {
+            updateUser(patchRes.data.user);
+          } else {
+            updateKycStatus('verified', {
+              dlNumber: extractedData.docNumber,
+              faceMatchScore: score
+            });
+          }
+        } catch (patchErr) {
+          console.warn('Backend KYC persistence patch warning:', patchErr);
+          updateKycStatus('verified', {
             dlNumber: extractedData.docNumber,
             faceMatchScore: score
-          }
-        });
+          });
+        }
       } else {
         setVerificationSuccess(false);
         setVerificationError(

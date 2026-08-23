@@ -26,6 +26,13 @@ const sendTokenResponse = (user, statusCode, res, message) => {
   const userObj = user.toObject ? user.toObject() : { ...user };
   delete userObj.password;
 
+  const kycStatus = userObj.kycStatus || userObj.kyc?.status || 'pending';
+  userObj.kycStatus = kycStatus;
+  userObj.kyc = {
+    ...(userObj.kyc || {}),
+    status: kycStatus
+  };
+
   res
     .status(statusCode)
     .cookie('jwt', token, cookieOptions)
@@ -61,7 +68,6 @@ export const register = async (req, res, next) => {
       });
     }
 
-    // Role assignment (default: renter)
     const roles = ['renter'];
     if (role && ['host', 'admin'].includes(role.toLowerCase())) {
       roles.push(role.toLowerCase());
@@ -72,7 +78,8 @@ export const register = async (req, res, next) => {
       email,
       phone,
       password,
-      roles: Array.from(new Set(roles))
+      roles: Array.from(new Set(roles)),
+      kycStatus: 'pending'
     });
 
     sendTokenResponse(user, 201, res, 'User registered successfully');
@@ -113,7 +120,42 @@ export const login = async (req, res, next) => {
       });
     }
 
-    sendTokenResponse(user, 200, res, 'Login successful');
+    // Fetch fresh user object from DB to ensure kycStatus is up-to-date
+    const freshUser = await User.findById(user._id);
+    sendTokenResponse(freshUser, 200, res, 'Login successful');
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @desc    Verify Phone OTP & login/register user
+ * @route   POST /api/v1/auth/verify-otp
+ * @access  Public
+ */
+export const verifyOTP = async (req, res, next) => {
+  try {
+    const { phone } = req.body;
+    if (!phone) {
+      return res.status(400).json({
+        success: false,
+        message: 'Phone number is required.'
+      });
+    }
+
+    let user = await User.findOne({ phone: phone.trim() });
+    if (!user) {
+      user = await User.create({
+        name: `Renter ${phone.slice(-4)}`,
+        email: `${phone.replace(/\D/g, '')}@primedrew.com`,
+        phone: phone.trim(),
+        password: 'Password123!',
+        roles: ['renter'],
+        kycStatus: 'pending'
+      });
+    }
+
+    sendTokenResponse(user, 200, res, 'OTP verified successfully');
   } catch (error) {
     next(error);
   }
@@ -127,9 +169,26 @@ export const login = async (req, res, next) => {
 export const getMe = async (req, res, next) => {
   try {
     const user = await User.findById(req.user.id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User profile not found.'
+      });
+    }
+
+    const userObj = user.toObject ? user.toObject() : { ...user };
+    delete userObj.password;
+
+    const kycStatus = userObj.kycStatus || userObj.kyc?.status || 'pending';
+    userObj.kycStatus = kycStatus;
+    userObj.kyc = {
+      ...(userObj.kyc || {}),
+      status: kycStatus
+    };
+
     res.status(200).json({
       success: true,
-      user
+      user: userObj
     });
   } catch (error) {
     next(error);

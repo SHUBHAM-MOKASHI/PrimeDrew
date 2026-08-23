@@ -6,7 +6,7 @@ const kycSchema = new mongoose.Schema(
     status: {
       type: String,
       enum: ['unverified', 'pending', 'verified', 'rejected'],
-      default: 'unverified'
+      default: 'pending'
     },
     dlNumber: { type: String, trim: true },
     dlExpiry: { type: Date },
@@ -59,9 +59,19 @@ const userSchema = new mongoose.Schema(
       enum: ['renter', 'host', 'admin'],
       default: ['renter']
     },
+    kycStatus: {
+      type: String,
+      enum: ['unverified', 'pending', 'verified', 'rejected'],
+      default: 'pending'
+    },
+    kycDetails: {
+      extractedData: { type: Object, default: {} },
+      verifiedAt: { type: Date },
+      similarityScore: { type: Number, min: 0, max: 100 }
+    },
     kyc: {
       type: kycSchema,
-      default: () => ({})
+      default: () => ({ status: 'pending' })
     },
     bankDetails: {
       type: bankDetailsSchema,

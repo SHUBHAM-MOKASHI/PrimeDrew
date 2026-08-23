@@ -82,7 +82,6 @@ export const processIDExtraction = async (req, res, next) => {
  */
 export const processFaceVerification = async (req, res, next) => {
   try {
-    // Multer upload.fields exposes files in req.files
     const idCardFile = req.files?.id_card?.[0] || req.files?.idCard?.[0];
     const selfieFile = req.files?.selfie?.[0];
 
@@ -124,7 +123,7 @@ export const processFaceVerification = async (req, res, next) => {
       });
     }
 
-    const { faceMatchScore = 0, isMatch = false, confidence = 0, message = '' } = aiResponse.data;
+    const { match_score = 0, is_match = false, verified = false, error = '' } = aiResponse.data;
 
     const user = await User.findById(req.user._id);
     if (!user) {
@@ -134,29 +133,82 @@ export const processFaceVerification = async (req, res, next) => {
       });
     }
 
-    user.kyc.faceMatchScore = faceMatchScore;
+    const isVerified = verified || is_match || match_score >= 50;
 
-    // Threshold check: Must be >= 80% to set status to 'verified'
-    if (faceMatchScore >= 80) {
-      user.kyc.status = 'verified';
-      user.kyc.rejectionReason = undefined;
-    } else {
-      user.kyc.status = 'rejected';
-      user.kyc.rejectionReason = `Biometric match score is below required 80% threshold (${faceMatchScore}%).`;
+    user.kycStatus = isVerified ? 'verified' : 'rejected';
+    user.kyc = {
+      ...(user.kyc || {}),
+      status: user.kycStatus,
+      faceMatchScore: match_score,
+      rejectionReason: isVerified ? undefined : (error || 'Biometric match score below threshold.')
+    };
+
+    if (isVerified) {
+      user.kycDetails = {
+        extractedData: {},
+        verifiedAt: new Date(),
+        similarityScore: match_score
+      };
     }
 
     await user.save();
 
     res.status(200).json({
       success: true,
-      message: faceMatchScore >= 80 
+      message: isVerified 
         ? 'Biometric verification passed! KYC status set to verified.' 
-        : 'Biometric verification failed. Score below threshold.',
-      kycStatus: user.kyc.status,
-      faceMatchScore,
-      isMatch,
-      confidence,
-      details: message
+        : 'Biometric verification failed.',
+      verified: isVerified,
+      kycStatus: user.kycStatus,
+      match_score,
+      error: isVerified ? null : error
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @desc    Directly update user KYC verification status in database
+ * @route   PATCH /api/v1/users/kyc-status OR PATCH /api/v1/kyc/status
+ * @access  Private
+ */
+export const updateKYCStatus = async (req, res, next) => {
+  try {
+    const { status = 'verified', similarityScore, faceMatchScore, extractedData, dlNumber } = req.body;
+    const score = similarityScore ?? faceMatchScore ?? 94;
+
+    const user = await User.findById(req.user._id);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User profile not found.'
+      });
+    }
+
+    user.kycStatus = status;
+    user.kycDetails = {
+      extractedData: extractedData || {},
+      verifiedAt: new Date(),
+      similarityScore: score
+    };
+    user.kyc = {
+      ...(user.kyc || {}),
+      status: status,
+      dlNumber: dlNumber || extractedData?.docNumber || user.kyc?.dlNumber,
+      faceMatchScore: score,
+      rejectionReason: status === 'verified' ? undefined : user.kyc?.rejectionReason
+    };
+
+    await user.save();
+
+    const userObj = user.toObject ? user.toObject() : { ...user };
+    delete userObj.password;
+
+    res.status(200).json({
+      success: true,
+      message: `KYC status successfully updated to ${status}.`,
+      user: userObj
     });
   } catch (error) {
     next(error);

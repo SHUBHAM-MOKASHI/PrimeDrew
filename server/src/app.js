@@ -9,6 +9,7 @@ import vehicleRoutes from './routes/vehicleRoutes.js';
 import bookingRoutes from './routes/bookingRoutes.js';
 import inspectionRoutes from './routes/inspectionRoutes.js';
 import kycRoutes from './routes/kycRoutes.js';
+import userRoutes from './routes/userRoutes.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 
 const app = express();
@@ -41,8 +42,8 @@ app.use(
 
 // Rate limiting
 const limiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 100, // Limit each IP to 100 requests per windowMs
+  windowMs: 15 * 60 * 1000,
+  max: 100,
   message: {
     success: false,
     message: 'Too many requests from this IP, please try again after 15 minutes.'
@@ -71,6 +72,7 @@ app.use('/api/v1/vehicles', vehicleRoutes);
 app.use('/api/v1/bookings', bookingRoutes);
 app.use('/api/v1/inspections', inspectionRoutes);
 app.use('/api/v1/kyc', kycRoutes);
+app.use('/api/v1/users', userRoutes);
 
 // 404 Handler
 app.use('*', (req, res) => {
