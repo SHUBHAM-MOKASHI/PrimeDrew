@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import Navbar from './components/common/Navbar';
 import AuthModal from './components/auth/AuthModal';
 import KYCModal from './components/kyc/KYCModal';
@@ -11,11 +11,11 @@ import HostDashboardPage from './pages/HostDashboardPage';
 import InspectionPage from './pages/InspectionPage';
 
 export function AppContent() {
-  const [isKycModalOpen, setIsKycModalOpen] = useState(false);
+  const { isKycModalOpen, closeKycModal } = useAuth();
 
   return (
     <div className="min-h-screen flex flex-col bg-slate-50 text-slate-900 selection:bg-indigo-500 selection:text-white">
-      <Navbar onOpenKycModal={() => setIsKycModalOpen(true)} />
+      <Navbar />
       
       <main className="flex-1">
         <Routes>
@@ -30,7 +30,7 @@ export function AppContent() {
       </main>
 
       <AuthModal />
-      <KYCModal isOpen={isKycModalOpen} onClose={() => setIsKycModalOpen(false)} />
+      <KYCModal isOpen={isKycModalOpen} onClose={closeKycModal} />
 
       {/* Footer */}
       <footer className="bg-white border-t border-slate-100 py-8 text-center text-xs text-slate-500">

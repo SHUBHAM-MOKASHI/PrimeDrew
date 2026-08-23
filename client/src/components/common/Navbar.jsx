@@ -18,7 +18,7 @@ import Button from './Button';
 export const Navbar = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, isLoggedIn, activeRole, kycStatus, logout, toggleActiveRole, openAuthModal } = useAuth();
+  const { user, isLoggedIn, activeRole, kycStatus, logout, toggleActiveRole, openAuthModal, openKycModal } = useAuth();
 
   const categories = [
     { name: 'All Vehicles', icon: SlidersHorizontal, path: '/vehicles' },
@@ -32,21 +32,36 @@ export const Navbar = () => {
     switch (kycStatus) {
       case 'verified':
         return (
-          <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold px-2.5 py-0.5 rounded-full inline-flex items-center gap-1">
+          <button
+            type="button"
+            onClick={openKycModal}
+            className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold px-2.5 py-0.5 rounded-full inline-flex items-center gap-1 cursor-pointer hover:bg-emerald-100 transition-colors"
+            title="KYC Verified - Click to view status"
+          >
             <ShieldCheck className="w-3 h-3" /> Verified Host/Renter
-          </span>
+          </button>
         );
       case 'pending':
         return (
-          <span className="bg-amber-50 text-amber-700 border border-amber-200 text-xs font-semibold px-2.5 py-0.5 rounded-full inline-flex items-center gap-1">
+          <button
+            type="button"
+            onClick={openKycModal}
+            className="bg-amber-50 text-amber-700 border border-amber-200 text-xs font-semibold px-2.5 py-0.5 rounded-full inline-flex items-center gap-1 cursor-pointer hover:bg-amber-100 transition-colors"
+            title="KYC Pending - Click to complete identity verification"
+          >
             KYC Pending
-          </span>
+          </button>
         );
       default:
         return (
-          <span className="bg-slate-100 text-slate-600 border border-slate-200 text-xs font-semibold px-2.5 py-0.5 rounded-full inline-flex items-center gap-1">
+          <button
+            type="button"
+            onClick={openKycModal}
+            className="bg-slate-100 text-slate-600 border border-slate-200 text-xs font-semibold px-2.5 py-0.5 rounded-full inline-flex items-center gap-1 cursor-pointer hover:bg-slate-200 transition-colors"
+            title="Unverified - Click to start 60-second AI verification"
+          >
             Unverified
-          </span>
+          </button>
         );
     }
   };
@@ -105,7 +120,7 @@ export const Navbar = () => {
             {/* Role Badge Toggle */}
             <button
               onClick={toggleActiveRole}
-              className="hidden lg:flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors"
+              className="hidden lg:flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl bg-slate-100 text-slate-700 hover:bg-slate-200 transition-colors cursor-pointer"
               title="Toggle Renter vs Host Mode"
             >
               <Repeat className="w-3.5 h-3.5 text-indigo-600" />
@@ -132,13 +147,19 @@ export const Navbar = () => {
             {/* User Profile / Auth State */}
             {isLoggedIn ? (
               <div className="flex items-center gap-3 pl-2 border-l border-slate-200">
-                <div className="hidden sm:flex flex-col items-end">
-                  <span className="text-xs font-bold text-slate-900">{user?.name}</span>
+                <div
+                  onClick={openKycModal}
+                  className="hidden sm:flex flex-col items-end cursor-pointer group"
+                  title="Click to view KYC status"
+                >
+                  <span className="text-xs font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
+                    {user?.name}
+                  </span>
                   {getKycBadge()}
                 </div>
                 <button
                   onClick={logout}
-                  className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+                  className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
                   title="Log Out"
                 >
                   <LogOut className="w-4 h-4" />

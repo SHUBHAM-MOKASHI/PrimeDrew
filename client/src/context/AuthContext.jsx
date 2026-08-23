@@ -15,7 +15,8 @@ export const AuthProvider = ({ children }) => {
   const [token, setToken] = useState(() => localStorage.getItem('primedrew_token') || null);
   const [activeRole, setActiveRole] = useState(() => localStorage.getItem('primedrew_role') || 'renter');
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
-  const [authModalTab, setAuthModalTab] = useState('renter'); // 'renter' | 'host'
+  const [authModalTab, setAuthModalTab] = useState('renter');
+  const [isKycModalOpen, setIsKycModalOpen] = useState(false);
 
   useEffect(() => {
     if (user) {
@@ -56,7 +57,29 @@ export const AuthProvider = ({ children }) => {
   };
 
   const updateUser = (updatedFields) => {
-    setUser((prev) => (prev ? { ...prev, ...updatedFields } : prev));
+    setUser((prev) => {
+      const updated = prev ? { ...prev, ...updatedFields } : prev;
+      if (updated) {
+        localStorage.setItem('primedrew_user', JSON.stringify(updated));
+      }
+      return updated;
+    });
+  };
+
+  const updateKycStatus = (status, extraData = {}) => {
+    setUser((prev) => {
+      if (!prev) return prev;
+      const updated = {
+        ...prev,
+        kyc: {
+          ...(prev.kyc || {}),
+          status,
+          ...extraData
+        }
+      };
+      localStorage.setItem('primedrew_user', JSON.stringify(updated));
+      return updated;
+    });
   };
 
   const toggleActiveRole = () => {
@@ -72,6 +95,14 @@ export const AuthProvider = ({ children }) => {
     setIsAuthModalOpen(false);
   };
 
+  const openKycModal = () => {
+    setIsKycModalOpen(true);
+  };
+
+  const closeKycModal = () => {
+    setIsKycModalOpen(false);
+  };
+
   const kycStatus = user?.kyc?.status || 'unverified';
 
   return (
@@ -80,16 +111,21 @@ export const AuthProvider = ({ children }) => {
         user,
         token,
         isLoggedIn: !!user,
+        isAuthenticated: !!user,
         activeRole,
         kycStatus,
         isAuthModalOpen,
         authModalTab,
+        isKycModalOpen,
         login,
         logout,
         updateUser,
+        updateKycStatus,
         toggleActiveRole,
         openAuthModal,
         closeAuthModal,
+        openKycModal,
+        closeKycModal,
         setAuthModalTab
       }}
     >
