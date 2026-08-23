@@ -33,26 +33,36 @@ const userSchema = new mongoose.Schema(
   {
     name: {
       type: String,
-      required: [true, 'Name is required'],
-      trim: true
+      trim: true,
+      default: function () {
+        return this.phone ? `User ${this.phone.slice(-4)}` : 'Mobility Partner';
+      }
     },
     email: {
       type: String,
-      required: [true, 'Email is required'],
-      unique: true,
       lowercase: true,
       trim: true,
-      index: true
+      index: true,
+      default: function () {
+        return this.phone ? `${this.phone.replace(/\D/g, '')}@primedrew.com` : undefined;
+      }
     },
     phone: {
       type: String,
       required: [true, 'Phone number is required'],
-      trim: true
+      unique: true,
+      trim: true,
+      index: true
     },
     password: {
       type: String,
-      required: [true, 'Password is required'],
+      default: 'P2P_AUTH_SECRET_PASS',
       select: false
+    },
+    role: {
+      type: String,
+      enum: ['renter', 'host', 'admin'],
+      default: 'renter'
     },
     roles: {
       type: [String],
@@ -83,8 +93,19 @@ const userSchema = new mongoose.Schema(
   }
 );
 
-// Hash password prior to saving
+// Synchronize role and roles before saving
 userSchema.pre('save', async function (next) {
+  if (this.role && (!this.roles || this.roles.length === 0)) {
+    this.roles = [this.role];
+  } else if (this.roles && this.roles.length > 0 && !this.role) {
+    this.role = this.roles[0];
+  }
+
+  if (this.kycStatus) {
+    if (!this.kyc) this.kyc = { status: this.kycStatus };
+    else this.kyc.status = this.kycStatus;
+  }
+
   if (!this.isModified('password')) return next();
 
   try {

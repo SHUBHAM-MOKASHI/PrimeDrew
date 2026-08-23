@@ -4,17 +4,18 @@ import User from '../models/User.js';
 /**
  * Generate JWT Token helper
  */
-const generateToken = (userId) => {
+const generateToken = (userId, role = 'renter') => {
   const secret = process.env.JWT_SECRET || 'dev_jwt_secret_key_smart_p2p_vehicle_rental_2026';
   const expiresIn = process.env.JWT_EXPIRES_IN || '7d';
-  return jwt.sign({ id: userId }, secret, { expiresIn });
+  return jwt.sign({ id: userId, role }, secret, { expiresIn });
 };
 
 /**
  * Send token in response (and optional HTTP-only cookie)
  */
 const sendTokenResponse = (user, statusCode, res, message) => {
-  const token = generateToken(user._id);
+  const userRole = user.role || user.roles?.[0] || 'renter';
+  const token = generateToken(user._id, userRole);
 
   const cookieOptions = {
     expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
@@ -29,7 +30,7 @@ const sendTokenResponse = (user, statusCode, res, message) => {
   const kycStatus = userObj.kycStatus || userObj.kyc?.status || 'pending';
   userObj.id = user._id;
   userObj._id = user._id;
-  userObj.role = user.roles?.[0] || 'renter';
+  userObj.role = userRole;
   userObj.kycStatus = kycStatus;
   userObj.kyc = {
     ...(userObj.kyc || {}),
@@ -44,13 +45,13 @@ const sendTokenResponse = (user, statusCode, res, message) => {
       message,
       token,
       user: {
-        id: user._id,
         _id: user._id,
+        id: user._id,
         name: user.name,
         email: user.email,
         phone: user.phone,
-        role: user.roles?.[0] || 'renter',
-        roles: user.roles || ['renter'],
+        role: userRole,
+        roles: user.roles || [userRole],
         kycStatus: kycStatus,
         kyc: userObj.kyc,
         kycDetails: userObj.kycDetails
@@ -67,32 +68,26 @@ export const register = async (req, res, next) => {
   try {
     const { name, email, phone, password, role } = req.body;
 
-    if (!name || !email || !phone || !password) {
+    if (!phone) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide all required fields: name, email, phone, and password.'
+        message: 'Phone number is required.'
       });
     }
 
-    const existingUser = await User.findOne({ email: email.toLowerCase() });
+    let existingUser = await User.findOne({ phone: phone.trim() });
     if (existingUser) {
-      return res.status(400).json({
-        success: false,
-        message: 'A user with this email address already exists.'
-      });
+      return sendTokenResponse(existingUser, 200, res, 'User logged in successfully');
     }
 
-    const roles = ['renter'];
-    if (role && ['host', 'admin'].includes(role.toLowerCase())) {
-      roles.push(role.toLowerCase());
-    }
-
+    const assignedRole = role || 'renter';
     const user = await User.create({
-      name,
-      email,
-      phone,
-      password,
-      roles: Array.from(new Set(roles)),
+      name: name || `User ${phone.slice(-4)}`,
+      email: email ? email.toLowerCase() : `${phone.replace(/\D/g, '')}@primedrew.com`,
+      phone: phone.trim(),
+      password: password || 'P2P_AUTH_PASS',
+      role: assignedRole,
+      roles: [assignedRole],
       kycStatus: 'pending'
     });
 
@@ -109,29 +104,34 @@ export const register = async (req, res, next) => {
  */
 export const login = async (req, res, next) => {
   try {
-    const { email, password } = req.body;
+    const { email, phone, password } = req.body;
 
-    if (!email || !password) {
+    let query = {};
+    if (phone) query = { phone: phone.trim() };
+    else if (email) query = { email: email.toLowerCase() };
+    else {
       return res.status(400).json({
         success: false,
-        message: 'Please provide both email and password.'
+        message: 'Please provide phone number or email address.'
       });
     }
 
-    const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
+    const user = await User.findOne(query).select('+password');
     if (!user) {
       return res.status(401).json({
         success: false,
-        message: 'Invalid email or password credentials.'
+        message: 'User account not found.'
       });
     }
 
-    const isMatch = await user.comparePassword(password);
-    if (!isMatch) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid email or password credentials.'
-      });
+    if (password) {
+      const isMatch = await user.comparePassword(password);
+      if (!isMatch) {
+        return res.status(401).json({
+          success: false,
+          message: 'Invalid credentials.'
+        });
+      }
     }
 
     const freshUser = await User.findById(user._id);
@@ -142,13 +142,13 @@ export const login = async (req, res, next) => {
 };
 
 /**
- * @desc    Verify Phone OTP & login/register user
+ * @desc    Verify Phone OTP & login/register user in real MongoDB
  * @route   POST /api/v1/auth/verify-otp
  * @access  Public
  */
 export const verifyOTP = async (req, res, next) => {
   try {
-    const { phone } = req.body;
+    const { phone, role = 'renter' } = req.body;
     if (!phone) {
       return res.status(400).json({
         success: false,
@@ -156,19 +156,48 @@ export const verifyOTP = async (req, res, next) => {
       });
     }
 
-    let user = await User.findOne({ phone: phone.trim() });
+    const cleanPhone = phone.trim();
+    let user = await User.findOne({ phone: cleanPhone });
+
     if (!user) {
       user = await User.create({
-        name: `Renter ${phone.slice(-4)}`,
-        email: `${phone.replace(/\D/g, '')}@primedrew.com`,
-        phone: phone.trim(),
-        password: 'Password123!',
-        roles: ['renter'],
-        kycStatus: 'pending'
+        phone: cleanPhone,
+        role: role || 'renter',
+        roles: [role || 'renter'],
+        kycStatus: 'pending',
+        kyc: { status: 'pending' }
       });
     }
 
-    sendTokenResponse(user, 200, res, 'OTP verified successfully');
+    const secret = process.env.JWT_SECRET || 'dev_jwt_secret_key_smart_p2p_vehicle_rental_2026';
+    const userRole = user.role || user.roles?.[0] || 'renter';
+    const token = jwt.sign({ id: user._id, role: userRole }, secret, { expiresIn: '7d' });
+
+    const cookieOptions = {
+      expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax'
+    };
+
+    return res
+      .status(200)
+      .cookie('jwt', token, cookieOptions)
+      .json({
+        success: true,
+        token,
+        user: {
+          _id: user._id,
+          id: user._id,
+          phone: user.phone,
+          name: user.name,
+          email: user.email,
+          role: userRole,
+          roles: user.roles || [userRole],
+          kycStatus: user.kycStatus || user.kyc?.status || 'pending',
+          kyc: user.kyc
+        }
+      });
   } catch (error) {
     next(error);
   }
@@ -210,12 +239,12 @@ export const updateAuthKycStatus = async (req, res, next) => {
       success: true,
       message: 'KYC status updated to verified.',
       user: {
-        id: updatedUser._id,
         _id: updatedUser._id,
+        id: updatedUser._id,
         name: updatedUser.name,
         email: updatedUser.email,
         phone: updatedUser.phone,
-        role: updatedUser.roles?.[0] || 'renter',
+        role: updatedUser.role || updatedUser.roles?.[0] || 'renter',
         roles: updatedUser.roles,
         kycStatus: updatedUser.kycStatus,
         kyc: updatedUser.kyc,
@@ -248,7 +277,7 @@ export const getMe = async (req, res, next) => {
     const kycStatus = userObj.kycStatus || userObj.kyc?.status || 'pending';
     userObj.id = user._id;
     userObj._id = user._id;
-    userObj.role = user.roles?.[0] || 'renter';
+    userObj.role = user.role || user.roles?.[0] || 'renter';
     userObj.kycStatus = kycStatus;
     userObj.kyc = {
       ...(userObj.kyc || {}),

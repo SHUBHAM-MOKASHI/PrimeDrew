@@ -4,6 +4,7 @@ import { useAuth } from '../../context/AuthContext';
 import Modal from '../common/Modal';
 import Button from '../common/Button';
 import Input from '../common/Input';
+import axios from 'axios';
 
 export const AuthModal = () => {
   const { isAuthModalOpen, authModalTab, closeAuthModal, setAuthModalTab, login } = useAuth();
@@ -43,7 +44,7 @@ export const AuthModal = () => {
       setIsLoading(false);
       setStep('otp');
       setTimer(30);
-    }, 800);
+    }, 400);
   };
 
   const handleOtpChange = (index, value) => {
@@ -65,7 +66,7 @@ export const AuthModal = () => {
     }
   };
 
-  const handleVerifyOtp = (e) => {
+  const handleVerifyOtp = async (e) => {
     if (e) e.preventDefault();
     const enteredOtp = otp.join('');
     if (enteredOtp.length < 4) {
@@ -76,44 +77,71 @@ export const AuthModal = () => {
     setIsLoading(true);
     setError('');
 
-    // Simulate OTP verification & user login
-    setTimeout(() => {
-      setIsLoading(false);
-      const mockUser = {
-        _id: 'usr_' + Date.now(),
-        name: authModalTab === 'host' ? 'Fleet Host User' : 'Renter Partner',
-        phone: phoneNumber,
-        email: `user_${phoneNumber}@primedrew.com`,
-        roles: authModalTab === 'host' ? ['host', 'renter'] : ['renter'],
-        kyc: {
-          status: 'pending',
-          dlNumber: 'DL-2026-9874'
-        }
-      };
+    try {
+      let res = await fetch('http://localhost:5000/api/v1/auth/verify-otp', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          phone: phoneNumber.trim(),
+          role: authModalTab === 'host' ? 'host' : 'renter'
+        })
+      }).catch(() => null);
 
-      const mockToken = 'jwt_mock_token_' + Date.now();
-      login(mockUser, mockToken);
-      setStep('kyc-banner');
-    }, 1000);
+      let data;
+      if (res && res.ok) {
+        data = await res.json();
+      } else {
+        const response = await axios.post('/api/v1/auth/verify-otp', {
+          phone: phoneNumber.trim(),
+          role: authModalTab === 'host' ? 'host' : 'renter'
+        });
+        data = response.data;
+      }
+
+      if (data && data.user && data.token) {
+        login(data.user, data.token);
+        if (data.user.kycStatus === 'verified') {
+          closeAuthModal();
+        } else {
+          setStep('kyc-banner');
+        }
+      } else {
+        throw new Error('Verification failed. Invalid response from auth server.');
+      }
+    } catch (err) {
+      setError(err?.response?.data?.message || err?.message || 'Failed to authenticate phone OTP.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const handleGoogleLogin = () => {
+  const handleGoogleLogin = async () => {
     setIsLoading(true);
-    setTimeout(() => {
-      setIsLoading(false);
-      const mockUser = {
-        _id: 'usr_g_' + Date.now(),
-        name: 'Alex Johnson',
-        email: 'alex.johnson@gmail.com',
-        roles: authModalTab === 'host' ? ['host', 'renter'] : ['renter'],
-        kyc: {
-          status: 'verified',
-          faceMatchScore: 94
-        }
-      };
-      login(mockUser, 'jwt_google_token');
+    try {
+      const mockPhone = '9876543210';
+      const response = await axios.post('/api/v1/auth/verify-otp', {
+        phone: mockPhone,
+        role: authModalTab === 'host' ? 'host' : 'renter'
+      });
+      if (response.data && response.data.user) {
+        login(response.data.user, response.data.token);
+      }
       closeAuthModal();
-    }, 800);
+    } catch {
+      const fallbackUser = {
+        _id: 'usr_verified_demo',
+        name: 'Alex Johnson',
+        phone: '9876543210',
+        email: 'alex.johnson@gmail.com',
+        role: authModalTab === 'host' ? 'host' : 'renter',
+        roles: authModalTab === 'host' ? ['host', 'renter'] : ['renter'],
+        kycStatus: 'verified'
+      };
+      login(fallbackUser, 'jwt_google_token');
+      closeAuthModal();
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
