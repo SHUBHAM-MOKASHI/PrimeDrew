@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ShieldCheck, Upload, Camera, Sparkles, CheckCircle2, AlertCircle, RefreshCw, ArrowRight, AlertOctagon } from 'lucide-react';
+import { ShieldCheck, Upload, Camera, Sparkles, CheckCircle2, AlertCircle, RefreshCw, ArrowRight, AlertOctagon, RotateCcw } from 'lucide-react';
 import Modal from '../common/Modal';
 import Button from '../common/Button';
 import Input from '../common/Input';
@@ -34,6 +34,16 @@ export const KYCModal = ({ isOpen, onClose }) => {
   const [verificationSuccess, setVerificationSuccess] = useState(false);
   const [verificationError, setVerificationError] = useState('');
 
+  // Reset state on modal open/close
+  useEffect(() => {
+    if (isOpen) {
+      resetState();
+    } else {
+      stopCamera();
+    }
+  }, [isOpen]);
+
+  // Camera stream lifecycle for Step 2
   useEffect(() => {
     if (step === 2 && isOpen) {
       startCamera();
@@ -42,6 +52,25 @@ export const KYCModal = ({ isOpen, onClose }) => {
     }
     return () => stopCamera();
   }, [step, isOpen]);
+
+  const resetState = () => {
+    setStep(1);
+    setDocFile(null);
+    setDocPreview(null);
+    setIsOcrLoading(false);
+    setSelfieBlob(null);
+    setSelfiePreview(null);
+    setCameraError('');
+    setIsVerifying(false);
+    setMatchScore(0);
+    setVerificationSuccess(false);
+    setVerificationError('');
+    setExtractedData({
+      name: user?.name || '',
+      docNumber: '',
+      expiryDate: ''
+    });
+  };
 
   const startCamera = async () => {
     setCameraError('');
@@ -215,14 +244,29 @@ export const KYCModal = ({ isOpen, onClose }) => {
     >
       <canvas ref={canvasRef} className="hidden" />
 
-      {/* Progress Steps Header */}
+      {/* Interactive Progress Stepper Navigation */}
       <div className="flex items-center justify-between mb-6 pb-3 border-b border-slate-100">
         {[
           { num: 1, label: 'ID Document' },
           { num: 2, label: 'Live Selfie' },
           { num: 3, label: 'AI Verification' }
         ].map((s) => (
-          <div key={s.num} className="flex items-center gap-1.5">
+          <button
+            key={s.num}
+            type="button"
+            onClick={() => {
+              if (s.num === 1) {
+                setStep(1);
+              } else if (s.num === 2 && docFile) {
+                setStep(2);
+              }
+            }}
+            disabled={s.num === 3 && step !== 3}
+            className={`flex items-center gap-1.5 transition-all cursor-pointer ${
+              (s.num === 1 || (s.num === 2 && docFile)) ? 'hover:opacity-80' : 'cursor-not-allowed opacity-70'
+            }`}
+            title={`Go to Step ${s.num}: ${s.label}`}
+          >
             <div
               className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
                 step > s.num
@@ -234,10 +278,10 @@ export const KYCModal = ({ isOpen, onClose }) => {
             >
               {step > s.num ? <CheckCircle2 className="w-4 h-4" /> : s.num}
             </div>
-            <span className={`text-xs font-semibold ${step === s.num ? 'text-indigo-600' : 'text-slate-400'}`}>
+            <span className={`text-xs font-semibold ${step === s.num ? 'text-indigo-600' : 'text-slate-500'}`}>
               {s.label}
             </span>
-          </div>
+          </button>
         ))}
       </div>
 
@@ -389,7 +433,7 @@ export const KYCModal = ({ isOpen, onClose }) => {
               <p className="text-xs text-slate-500 mt-1">Comparing ID photo embedding against live selfie</p>
             </div>
           ) : verificationError ? (
-            <div className="space-y-4">
+            <div className="space-y-4 w-full">
               <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 text-left text-xs text-rose-900 flex items-start gap-3">
                 <AlertOctagon className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
                 <div>
@@ -398,11 +442,11 @@ export const KYCModal = ({ isOpen, onClose }) => {
                 </div>
               </div>
 
-              <div className="flex gap-2">
-                <Button variant="outline" onClick={() => setStep(2)} className="flex-1 py-3">
-                  Try Again
+              <div className="flex flex-col sm:flex-row gap-2 w-full">
+                <Button variant="primary" leftIcon={RotateCcw} onClick={resetState} className="flex-1 py-3">
+                  Try Again / Re-upload ID
                 </Button>
-                <Button variant="primary" onClick={onClose} className="flex-1 py-3">
+                <Button variant="outline" onClick={onClose} className="flex-1 py-3">
                   Close
                 </Button>
               </div>
