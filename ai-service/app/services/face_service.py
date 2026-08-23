@@ -2,7 +2,7 @@ import io
 import cv2
 import numpy as np
 from PIL import Image
-from typing import Tuple, Optional
+from typing import Tuple, Optional, List
 
 from app.core.config import settings
 from app.core.logger import logger
@@ -19,74 +19,113 @@ class FaceService:
             raise ValueError("Corrupted or invalid face image data.")
 
     @classmethod
+    def extract_largest_face_crop(cls, img_bgr: np.ndarray, backend: str = "opencv") -> Optional[np.ndarray]:
+        """
+        Extracts the largest detected face bounding box from an image to prevent
+        background text, stamps, or extra card icons from interfering with face embeddings.
+        """
+        try:
+            from deepface import DeepFace
+            faces = DeepFace.extract_faces(
+                img_path=img_bgr,
+                detector_backend=backend,
+                enforce_detection=False
+            )
+            if not faces:
+                return None
+
+            # Filter faces by size (width * height) and pick the largest box
+            largest_face = None
+            max_area = 0
+
+            for face_obj in faces:
+                facial_area = face_obj.get("facial_area", {})
+                w = facial_area.get("w", 0)
+                h = facial_area.get("h", 0)
+                area = w * h
+                if area > max_area:
+                    max_area = area
+                    x = facial_area.get("x", 0)
+                    y = facial_area.get("y", 0)
+                    # Extract face crop with slight padding
+                    h_img, w_img, _ = img_bgr.shape
+                    x1 = max(0, x - int(w * 0.1))
+                    y1 = max(0, y - int(h * 0.1))
+                    x2 = min(w_img, x + w + int(w * 0.1))
+                    y2 = min(h_img, y + h + int(h * 0.1))
+                    largest_face = img_bgr[y1:y2, x1:x2]
+
+            return largest_face if largest_face is not None and largest_face.size > 0 else None
+        except Exception as e:
+            logger.debug(f"Face crop extraction via {backend} failed: {e}")
+            return None
+
+    @classmethod
     def verify_biometric_faces(cls, id_card_bytes: bytes, selfie_bytes: bytes) -> FaceVerifyResponse:
         id_img = cls.bytes_to_cv2(id_card_bytes)
         selfie_img = cls.bytes_to_cv2(selfie_bytes)
 
         threshold = getattr(settings, 'FACE_MATCH_THRESHOLD', 0.40)
+        detector_backends: List[str] = ['retinaface', 'mtcnn', 'ssd', 'opencv']
 
-        try:
-            from deepface import DeepFace
-            # Run DeepFace 1:1 verification with detector_backend='opencv' and enforce_detection=True
-            result = DeepFace.verify(
-                img1_path=id_img,
-                img2_path=selfie_img,
-                model_name="VGG-Face",
-                distance_metric="cosine",
-                detector_backend="opencv",
-                enforce_detection=True
-            )
+        # Attempt verification sequentially across robust detector backends
+        for backend in detector_backends:
+            try:
+                from deepface import DeepFace
+                logger.info(f"Attempting 1:1 face verification with Facenet512 and detector_backend='{backend}'...")
 
-            distance = float(result.get("distance", 1.0))
-            is_match = bool(result.get("verified", False))
+                # Pre-crop largest face if available
+                id_crop = cls.extract_largest_face_crop(id_img, backend) or id_img
+                selfie_crop = cls.extract_largest_face_crop(selfie_img, backend) or selfie_img
 
-            # Calculate real percentage similarity score: (1 - distance) * 100
-            similarity_score = max(0.0, min(100.0, round((1.0 - distance) * 100.0, 2)))
+                result = DeepFace.verify(
+                    img1_path=id_crop,
+                    img2_path=selfie_crop,
+                    model_name="Facenet512",
+                    detector_backend=backend,
+                    distance_metric="cosine",
+                    enforce_detection=True
+                )
 
-            # Mark verified = True ONLY if is_match == True AND similarity_score >= 65
-            verified = is_match and (similarity_score >= 65.0)
+                distance = float(result.get("distance", 1.0))
+                # Calculate percentage similarity score: max(0, min(100, round((1 - distance) * 100, 2)))
+                similarity_score = max(0.0, min(100.0, round((1.0 - distance) * 100.0, 2)))
 
-            if not verified:
+                # Mark verified = True if result['verified'] is True OR similarity_score >= 55%
+                verified = bool(result.get("verified", False) or similarity_score >= 55.0)
+                thresh = float(result.get("threshold", threshold))
+
+                if not verified:
+                    return FaceVerifyResponse(
+                        success=False,
+                        verified=False,
+                        is_match=False,
+                        match_score=similarity_score,
+                        distance=round(distance, 4),
+                        threshold=thresh,
+                        error=f"Facial match score ({similarity_score}%) is below required threshold (55%). Please ensure both photos are clear and well lit."
+                    )
+
                 return FaceVerifyResponse(
-                    success=False,
-                    verified=False,
-                    is_match=is_match,
+                    success=True,
+                    verified=True,
+                    is_match=True,
                     match_score=similarity_score,
                     distance=round(distance, 4),
-                    threshold=threshold,
-                    error="Facial match score is below required threshold (65%). Please ensure both photos are clear and well lit."
+                    threshold=thresh,
+                    error=None
                 )
 
-            return FaceVerifyResponse(
-                success=True,
-                verified=True,
-                is_match=True,
-                match_score=similarity_score,
-                distance=round(distance, 4),
-                threshold=threshold,
-                error=None
-            )
+            except Exception as e:
+                logger.warning(f"Face verification attempt with detector_backend='{backend}' failed: {e}")
+                continue
 
-        except Exception as e:
-            err_msg = str(e)
-            logger.warning(f"Face detection or verification exception: {err_msg}")
-
-            if "Face could not be detected" in err_msg or "enforce_detection" in err_msg or "detect" in err_msg.lower():
-                return FaceVerifyResponse(
-                    success=False,
-                    verified=False,
-                    is_match=False,
-                    match_score=0.0,
-                    distance=1.0,
-                    threshold=threshold,
-                    error="Face not detected in one of the uploaded images. Please upload a clear photo ID and take a clear selfie."
-                )
-
-            return cls._fallback_haar_verification(id_img, selfie_img, threshold)
+        # If all deepface detector backends fail, try OpenCV Haar cascade fallback
+        return cls._fallback_haar_verification(id_img, selfie_img, threshold)
 
     @classmethod
     def _fallback_haar_verification(cls, id_img: np.ndarray, selfie_img: np.ndarray, threshold: float) -> FaceVerifyResponse:
-        """OpenCV Haar cascade face detection fallback."""
+        """OpenCV Haar cascade face detection fallback for robust error handling."""
         try:
             cascade_path = cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
             face_cascade = cv2.CascadeClassifier(cascade_path)
