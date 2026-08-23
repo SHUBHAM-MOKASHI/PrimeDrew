@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ShieldCheck, Upload, Camera, Sparkles, CheckCircle2, AlertCircle, RefreshCw, ArrowRight } from 'lucide-react';
+import { ShieldCheck, Upload, Camera, Sparkles, CheckCircle2, AlertCircle, RefreshCw, ArrowRight, AlertOctagon } from 'lucide-react';
 import Modal from '../common/Modal';
 import Button from '../common/Button';
 import Input from '../common/Input';
@@ -31,6 +31,8 @@ export const KYCModal = ({ isOpen, onClose }) => {
   // Step 3: Face Match AI State
   const [isVerifying, setIsVerifying] = useState(false);
   const [matchScore, setMatchScore] = useState(0);
+  const [verificationSuccess, setVerificationSuccess] = useState(false);
+  const [verificationError, setVerificationError] = useState('');
 
   useEffect(() => {
     if (step === 2 && isOpen) {
@@ -53,7 +55,7 @@ export const KYCModal = ({ isOpen, onClose }) => {
         videoRef.current.srcObject = stream;
       }
     } catch {
-      setCameraError('Camera access unavailable. You can upload a selfie photo instead.');
+      setCameraError('Camera access unavailable. You can upload a selfie photo file instead.');
     }
   };
 
@@ -76,37 +78,33 @@ export const KYCModal = ({ isOpen, onClose }) => {
       const formData = new FormData();
       formData.append('file', file);
 
-      // Call AI microservice endpoint directly or via API Gateway
-      const response = await axios.post('/api/v1/kyc/extract-id', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-          Authorization: token ? `Bearer ${token}` : ''
-        }
-      });
-
-      if (response.data && response.data.data) {
-        const d = response.data.data;
-        setExtractedData({
-          name: d.name || user?.name || 'Verified Cardholder',
-          docNumber: d.dlNumber || d.document_number || 'DL-2026-MH9812',
-          expiryDate: d.expiryDate || '2032-05-15'
+      let response;
+      try {
+        response = await axios.post('http://localhost:8000/api/v1/ai/extract-id', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
         });
-      } else {
-        fallbackOcr();
+      } catch {
+        response = await axios.post('/api/v1/kyc/extract-id', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+            Authorization: token ? `Bearer ${token}` : ''
+          }
+        });
       }
-    } catch {
-      fallbackOcr();
+
+      if (response.data && (response.data.ocr_data || response.data.data)) {
+        const d = response.data.ocr_data || response.data.data;
+        setExtractedData({
+          name: d.full_name || d.name || user?.name || '',
+          docNumber: d.document_number || d.dlNumber || '',
+          expiryDate: d.expiry_date || d.expiryDate || ''
+        });
+      }
+    } catch (err) {
+      console.warn('OCR extraction warning:', err);
     } finally {
       setIsOcrLoading(false);
     }
-  };
-
-  const fallbackOcr = () => {
-    setExtractedData({
-      name: user?.name || 'Rahul Sharma',
-      docNumber: 'DL-2026-MH9812',
-      expiryDate: '2032-05-15'
-    });
   };
 
   const captureSelfie = () => {
@@ -139,51 +137,72 @@ export const KYCModal = ({ isOpen, onClose }) => {
   };
 
   const handleRunFaceVerification = async () => {
+    if (!docFile || !selfieBlob) return;
+
     setStep(3);
     setIsVerifying(true);
+    setVerificationError('');
     setMatchScore(0);
-
-    const targetScore = 94.5;
-    let current = 0;
-    const interval = setInterval(() => {
-      current += 3;
-      if (current >= targetScore) {
-        current = targetScore;
-        clearInterval(interval);
-      }
-      setMatchScore(Math.min(current, 100));
-    }, 35);
+    setVerificationSuccess(false);
 
     try {
-      if (docFile && selfieBlob) {
-        const formData = new FormData();
-        formData.append('id_card', docFile);
-        formData.append('selfie', selfieBlob, 'selfie.jpg');
+      const formData = new FormData();
+      formData.append('id_card', docFile);
+      formData.append('selfie', selfieBlob, 'selfie.jpg');
 
-        await axios.post('/api/v1/kyc/verify-face', formData, {
-          headers: {
-            'Content-Type': 'multipart/form-data',
-            Authorization: token ? `Bearer ${token}` : ''
-          }
+      let resData = null;
+
+      try {
+        const response = await axios.post('http://localhost:8000/api/v1/ai/verify-face', formData, {
+          headers: { 'Content-Type': 'multipart/form-data' }
         });
+        resData = response.data;
+      } catch (directErr) {
+        try {
+          const response = await axios.post('/api/v1/kyc/verify-face', formData, {
+            headers: {
+              'Content-Type': 'multipart/form-data',
+              Authorization: token ? `Bearer ${token}` : ''
+            }
+          });
+          resData = response.data;
+        } catch (proxyErr) {
+          throw directErr.response?.data?.detail || directErr.response?.data?.error || directErr.message;
+        }
       }
-    } catch {
-      // Graceful fallback for mock dev
-    } finally {
-      setTimeout(() => {
-        setIsVerifying(false);
+
+      setIsVerifying(false);
+
+      const isVerified = resData?.verified ?? resData?.is_match ?? false;
+      const score = resData?.match_score ?? resData?.faceMatchScore ?? 0;
+      const errorMsg = resData?.error || resData?.message;
+
+      setMatchScore(score);
+
+      if (isVerified && score >= 65) {
+        setVerificationSuccess(true);
         updateKycStatus('verified', {
           dlNumber: extractedData.docNumber,
-          faceMatchScore: 94
+          faceMatchScore: score
         });
         updateUser({
           kyc: {
             status: 'verified',
             dlNumber: extractedData.docNumber,
-            faceMatchScore: 94
+            faceMatchScore: score
           }
         });
-      }, 1200);
+      } else {
+        setVerificationSuccess(false);
+        setVerificationError(
+          errorMsg || `Facial match score (${score}%) is below required threshold (65%). Please upload a clear photo ID and retake your selfie.`
+        );
+      }
+    } catch (err) {
+      setIsVerifying(false);
+      setVerificationSuccess(false);
+      const errMsg = typeof err === 'string' ? err : err?.detail || err?.error || err?.message || 'Face not detected in one of the uploaded images. Please upload a clear photo ID and take a clear selfie.';
+      setVerificationError(errMsg);
     }
   };
 
@@ -341,7 +360,7 @@ export const KYCModal = ({ isOpen, onClose }) => {
         </div>
       )}
 
-      {/* STEP 3: Verification Status Loader & Result */}
+      {/* STEP 3: Verification Status & Real Response Banner */}
       {step === 3 && (
         <div className="flex flex-col items-center text-center gap-5 py-4 animate-in zoom-in-95 duration-300">
           <div className="relative flex items-center justify-center w-24 h-24">
@@ -353,7 +372,7 @@ export const KYCModal = ({ isOpen, onClose }) => {
                 r="38"
                 stroke="currentColor"
                 strokeWidth="6"
-                className="text-emerald-500 transition-all duration-300"
+                className={verificationError ? 'text-rose-500 transition-all duration-300' : 'text-emerald-500 transition-all duration-300'}
                 fill="transparent"
                 strokeDasharray="238.76"
                 strokeDashoffset={238.76 - (238.76 * matchScore) / 100}
@@ -367,7 +386,26 @@ export const KYCModal = ({ isOpen, onClose }) => {
               <h3 className="text-base font-bold text-slate-900 flex items-center justify-center gap-2">
                 <Sparkles className="w-4 h-4 text-indigo-600 animate-spin" /> DeepFace Biometric Matcher...
               </h3>
-              <p className="text-xs text-slate-500 mt-1">Comparing ID card photo embedding against live selfie</p>
+              <p className="text-xs text-slate-500 mt-1">Comparing ID photo embedding against live selfie</p>
+            </div>
+          ) : verificationError ? (
+            <div className="space-y-4">
+              <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 text-left text-xs text-rose-900 flex items-start gap-3">
+                <AlertOctagon className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-bold text-sm text-rose-950 block">Face Verification Rejected</span>
+                  <p className="text-rose-700 mt-1 leading-relaxed">{verificationError}</p>
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setStep(2)} className="flex-1 py-3">
+                  Try Again
+                </Button>
+                <Button variant="primary" onClick={onClose} className="flex-1 py-3">
+                  Close
+                </Button>
+              </div>
             </div>
           ) : (
             <div className="space-y-3">

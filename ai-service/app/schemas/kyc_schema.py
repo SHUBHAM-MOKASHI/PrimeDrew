@@ -15,7 +15,9 @@ class KYCOCRResponse(BaseModel):
 
 class FaceVerifyResponse(BaseModel):
     success: bool = True
-    is_match: bool = Field(..., description="True if face match distance is below configured cutoff threshold")
-    match_score: float = Field(..., ge=0.0, le=100.0, description="Computed match percentage confidence (0-100%)")
-    distance: float = Field(..., description="Computed facial embedding metric (e.g. cosine distance)")
-    threshold: float = Field(..., description="Acceptance cutoff threshold applied")
+    verified: bool = Field(False, description="True if face verification passed distance and similarity threshold")
+    is_match: bool = Field(False, description="True if face match distance is below configured cutoff threshold")
+    match_score: float = Field(0.0, ge=0.0, le=100.0, description="Computed similarity percentage (0-100%)")
+    distance: float = Field(0.0, description="Computed facial embedding distance metric")
+    threshold: float = Field(0.4, description="Acceptance cutoff threshold applied")
+    error: Optional[str] = Field(None, description="Error message if face detection or verification failed")
