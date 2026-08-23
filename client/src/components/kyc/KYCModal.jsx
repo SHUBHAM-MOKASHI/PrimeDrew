@@ -113,10 +113,11 @@ export const KYCModal = ({ isOpen, onClose }) => {
           headers: { 'Content-Type': 'multipart/form-data' }
         });
       } catch {
+        const authToken = token || localStorage.getItem('token') || localStorage.getItem('primedrew_token');
         response = await axios.post('/api/v1/kyc/extract-id', formData, {
           headers: {
             'Content-Type': 'multipart/form-data',
-            Authorization: token ? `Bearer ${token}` : ''
+            Authorization: authToken ? `Bearer ${authToken}` : ''
           }
         });
       }
@@ -188,10 +189,11 @@ export const KYCModal = ({ isOpen, onClose }) => {
         resData = response.data;
       } catch (directErr) {
         try {
+          const authToken = token || localStorage.getItem('token') || localStorage.getItem('primedrew_token');
           const response = await axios.post('/api/v1/kyc/verify-face', formData, {
             headers: {
               'Content-Type': 'multipart/form-data',
-              Authorization: token ? `Bearer ${token}` : ''
+              Authorization: authToken ? `Bearer ${authToken}` : ''
             }
           });
           resData = response.data;
@@ -211,35 +213,54 @@ export const KYCModal = ({ isOpen, onClose }) => {
       if (isVerified && score >= 50) {
         setVerificationSuccess(true);
 
-        try {
-          const patchRes = await axios.patch(
-            '/api/v1/users/kyc-status',
-            {
-              status: 'verified',
-              similarityScore: score,
-              extractedData
-            },
-            {
-              headers: {
-                Authorization: token ? `Bearer ${token}` : ''
-              }
-            }
-          );
+        const authToken = token || localStorage.getItem('token') || localStorage.getItem('primedrew_token');
+        let updatedUser = null;
 
-          if (patchRes.data && patchRes.data.user) {
-            updateUser(patchRes.data.user);
+        try {
+          const patchRes = await fetch('http://localhost:5000/api/v1/users/kyc-status', {
+            method: 'PATCH',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${authToken}`
+            },
+            body: JSON.stringify({ status: 'verified', similarityScore: score, extractedData })
+          }).catch(() => null);
+
+          if (patchRes && patchRes.ok) {
+            const data = await patchRes.json();
+            updatedUser = data.user;
           } else {
-            updateKycStatus('verified', {
+            const res = await axios.patch(
+              '/api/v1/users/kyc-status',
+              { status: 'verified', similarityScore: score, extractedData },
+              { headers: { Authorization: `Bearer ${authToken}` } }
+            ).catch(() => null);
+            if (res?.data?.user) {
+              updatedUser = res.data.user;
+            }
+          }
+        } catch (e) {
+          console.warn('KYC patch error:', e);
+        }
+
+        if (updatedUser) {
+          updateUser(updatedUser);
+          localStorage.setItem('user', JSON.stringify(updatedUser));
+          localStorage.setItem('primedrew_user', JSON.stringify(updatedUser));
+        } else {
+          const localUpdated = {
+            ...(user || {}),
+            kycStatus: 'verified',
+            kyc: {
+              ...(user?.kyc || {}),
+              status: 'verified',
               dlNumber: extractedData.docNumber,
               faceMatchScore: score
-            });
-          }
-        } catch (patchErr) {
-          console.warn('Backend KYC persistence patch warning:', patchErr);
-          updateKycStatus('verified', {
-            dlNumber: extractedData.docNumber,
-            faceMatchScore: score
-          });
+            }
+          };
+          updateUser(localUpdated);
+          localStorage.setItem('user', JSON.stringify(localUpdated));
+          localStorage.setItem('primedrew_user', JSON.stringify(localUpdated));
         }
       } else {
         setVerificationSuccess(false);
