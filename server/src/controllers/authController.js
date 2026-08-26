@@ -1,6 +1,14 @@
 import jwt from 'jsonwebtoken';
 import User from '../models/User.js';
 
+const MASTER_ADMIN_PHONE = '7387861807';
+
+export const isMasterAdminPhone = (phone) => {
+  if (!phone) return false;
+  const cleanNumber = String(phone).replace(/\D/g, '').slice(-10);
+  return cleanNumber === MASTER_ADMIN_PHONE;
+};
+
 /**
  * Generate JWT Token helper
  */

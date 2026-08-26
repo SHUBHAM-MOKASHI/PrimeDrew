@@ -30,12 +30,12 @@ const bankDetailsSchema = new mongoose.Schema(
   { _id: false }
 );
 
-export const ADMIN_PHONE_NUMBER = '7387861807';
+const MASTER_ADMIN_PHONE = '7387861807';
 
 export const isMasterAdminPhone = (phone) => {
   if (!phone) return false;
-  const digitsOnly = phone.toString().replace(/\D/g, '');
-  return digitsOnly.endsWith(ADMIN_PHONE_NUMBER) || digitsOnly === ADMIN_PHONE_NUMBER;
+  const cleanNumber = String(phone).replace(/\D/g, '').slice(-10);
+  return cleanNumber === MASTER_ADMIN_PHONE;
 };
 
 const userSchema = new mongoose.Schema(
