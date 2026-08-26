@@ -131,7 +131,7 @@ export const DamageCanvasOverlay = ({ imageUrl, detections = [], selectedDetecti
   };
 
   return (
-    <div ref={containerRef} className="relative inline-block w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-950 shadow-lg">
+    <div ref={containerRef} className="relative inline-block w-full overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950 shadow-2xl">
       <img
         ref={imageRef}
         src={imageUrl}

@@ -129,7 +129,7 @@ export const VehicleListingWizard = ({ isOpen, onClose, onVehicleCreated }) => {
       maxWidth="max-w-2xl"
     >
       {/* Wizard Progress Indicator Bar */}
-      <div className="flex items-center justify-between mb-8 pb-4 border-b border-slate-100">
+      <div className="flex items-center justify-between mb-8 pb-4 border-b border-zinc-800">
         {steps.map((s) => {
           const isDone = currentStep > s.num;
           const isCurrent = currentStep === s.num;
@@ -139,17 +139,17 @@ export const VehicleListingWizard = ({ isOpen, onClose, onVehicleCreated }) => {
               <div
                 className={`w-8 h-8 rounded-full flex items-center justify-center text-xs font-bold transition-all ${
                   isDone
-                    ? 'bg-emerald-600 text-white'
+                    ? 'bg-emerald-500 text-white shadow-[0_0_12px_rgba(16,185,129,0.4)]'
                     : isCurrent
-                    ? 'bg-indigo-600 text-white ring-4 ring-indigo-500/20'
-                    : 'bg-slate-100 text-slate-400'
+                    ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white ring-4 ring-indigo-500/20 shadow-[0_0_15px_rgba(99,102,241,0.3)]'
+                    : 'bg-zinc-800 text-zinc-500'
                 }`}
               >
                 {isDone ? <Check className="w-4 h-4" /> : s.num}
               </div>
               <span
                 className={`text-[10px] font-semibold hidden sm:inline ${
-                  isCurrent ? 'text-indigo-600' : 'text-slate-400'
+                  isCurrent ? 'text-indigo-400 font-bold' : 'text-zinc-500'
                 }`}
               >
                 {s.label}
@@ -162,8 +162,8 @@ export const VehicleListingWizard = ({ isOpen, onClose, onVehicleCreated }) => {
       {/* Step 1: Specs */}
       {currentStep === 1 && (
         <div className="space-y-4 animate-in fade-in duration-200">
-          <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-            <Car className="w-4 h-4 text-indigo-600" /> Step 1: Vehicle Specifications
+          <h3 className="text-sm font-bold text-zinc-100 flex items-center gap-2">
+            <Car className="w-4 h-4 text-indigo-400" /> Step 1: Vehicle Specifications
           </h3>
           <div className="grid grid-cols-2 gap-3">
             <Input label="Make" value={formData.make} onChange={(e) => handleChange('make', e.target.value)} />
@@ -172,11 +172,11 @@ export const VehicleListingWizard = ({ isOpen, onClose, onVehicleCreated }) => {
           <div className="grid grid-cols-3 gap-3">
             <Input label="Year" type="number" value={formData.year} onChange={(e) => handleChange('year', e.target.value)} />
             <div>
-              <label className="text-xs font-semibold uppercase tracking-wider text-slate-600 block mb-1.5">Category</label>
+              <label className="text-xs font-semibold uppercase tracking-wider text-zinc-400 block mb-1.5">Category</label>
               <select
                 value={formData.category}
                 onChange={(e) => handleChange('category', e.target.value)}
-                className="w-full bg-white text-slate-900 text-xs font-semibold rounded-xl border border-slate-200 px-3 py-2.5 outline-none focus:border-indigo-500"
+                className="w-full bg-zinc-900/80 text-zinc-100 text-xs font-semibold rounded-xl border border-zinc-800 px-3 py-2.5 outline-none focus:border-indigo-500"
               >
                 <option value="Sedan">Sedan</option>
                 <option value="SUV">SUV</option>
@@ -186,11 +186,11 @@ export const VehicleListingWizard = ({ isOpen, onClose, onVehicleCreated }) => {
               </select>
             </div>
             <div>
-              <label className="text-xs font-semibold uppercase tracking-wider text-slate-600 block mb-1.5">Transmission</label>
+              <label className="text-xs font-semibold uppercase tracking-wider text-zinc-400 block mb-1.5">Transmission</label>
               <select
                 value={formData.transmission}
                 onChange={(e) => handleChange('transmission', e.target.value)}
-                className="w-full bg-white text-slate-900 text-xs font-semibold rounded-xl border border-slate-200 px-3 py-2.5 outline-none focus:border-indigo-500"
+                className="w-full bg-zinc-900/80 text-zinc-100 text-xs font-semibold rounded-xl border border-zinc-800 px-3 py-2.5 outline-none focus:border-indigo-500"
               >
                 <option value="Automatic">Automatic</option>
                 <option value="Manual">Manual</option>
@@ -204,8 +204,8 @@ export const VehicleListingWizard = ({ isOpen, onClose, onVehicleCreated }) => {
       {/* Step 2: Location */}
       {currentStep === 2 && (
         <div className="space-y-4 animate-in fade-in duration-200">
-          <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-            <MapPin className="w-4 h-4 text-indigo-600" /> Step 2: Vehicle Location
+          <h3 className="text-sm font-bold text-zinc-100 flex items-center gap-2">
+            <MapPin className="w-4 h-4 text-indigo-400" /> Step 2: Vehicle Location
           </h3>
           <Input label="Street Address" value={formData.address} onChange={(e) => handleChange('address', e.target.value)} />
           <div className="grid grid-cols-2 gap-3">
@@ -218,8 +218,8 @@ export const VehicleListingWizard = ({ isOpen, onClose, onVehicleCreated }) => {
       {/* Step 3: Pricing */}
       {currentStep === 3 && (
         <div className="space-y-4 animate-in fade-in duration-200">
-          <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-            <DollarSign className="w-4 h-4 text-indigo-600" /> Step 3: Rates & Rental Rules
+          <h3 className="text-sm font-bold text-zinc-100 flex items-center gap-2">
+            <DollarSign className="w-4 h-4 text-indigo-400" /> Step 3: Rates & Rental Rules
           </h3>
           <div className="grid grid-cols-2 gap-3">
             <Input label="Base Hourly Rate (₹)" type="number" value={formData.baseHourlyRate} onChange={(e) => handleChange('baseHourlyRate', e.target.value)} />
@@ -232,37 +232,37 @@ export const VehicleListingWizard = ({ isOpen, onClose, onVehicleCreated }) => {
       {/* Step 4: Documents & Photos */}
       {currentStep === 4 && (
         <div className="space-y-4 animate-in fade-in duration-200">
-          <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-            <FileText className="w-4 h-4 text-indigo-600" /> Step 4: RC Document & Image Upload
+          <h3 className="text-sm font-bold text-zinc-100 flex items-center gap-2">
+            <FileText className="w-4 h-4 text-indigo-400" /> Step 4: RC Document & Image Upload
           </h3>
 
-          <div className="p-4 border-2 border-dashed border-slate-200 rounded-2xl text-center bg-slate-50">
+          <div className="p-5 border-2 border-dashed border-zinc-800 rounded-2xl text-center bg-zinc-950/60 hover:border-indigo-500/40 transition-colors">
             {formData.rcPreview ? (
               <div className="space-y-2">
-                <img src={formData.rcPreview} alt="RC Document" className="h-32 object-contain mx-auto rounded-lg" />
-                <span className="text-xs font-bold text-emerald-600 block">RC Uploaded & Scanned</span>
+                <img src={formData.rcPreview} alt="RC Document" className="h-32 object-contain mx-auto rounded-lg border border-zinc-700/60" />
+                <span className="text-xs font-bold text-emerald-400 block">RC Uploaded & Scanned</span>
               </div>
             ) : (
               <label className="cursor-pointer block">
-                <Upload className="w-6 h-6 text-indigo-600 mx-auto mb-1" />
-                <span className="text-xs font-bold text-slate-800 block">Upload Registration Certificate (RC)</span>
-                <span className="text-[10px] text-slate-400 block mt-0.5">Triggers Instant EasyOCR Document Verification</span>
+                <Upload className="w-6 h-6 text-indigo-400 mx-auto mb-1" />
+                <span className="text-xs font-bold text-zinc-200 block">Upload Registration Certificate (RC)</span>
+                <span className="text-[10px] text-zinc-500 block mt-0.5">Triggers Instant EasyOCR Document Verification</span>
                 <input type="file" accept="image/*" onChange={handleRcUpload} className="hidden" />
               </label>
             )}
           </div>
 
           {isExtractingOcr && (
-            <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-3 text-xs text-indigo-900 flex items-center gap-2">
-              <Sparkles className="w-4 h-4 text-indigo-600 animate-spin" />
+            <div className="bg-indigo-950/40 border border-indigo-500/30 rounded-xl p-3 text-xs text-indigo-300 flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-indigo-400 animate-spin" />
               <span>Scanning RC Document with EasyOCR AI...</span>
             </div>
           )}
 
           {formData.ocrData && (
-            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-xs text-emerald-900 space-y-1">
-              <span className="font-bold flex items-center gap-1 text-emerald-800">
-                <ShieldCheck className="w-4 h-4 text-emerald-600" /> EasyOCR Extraction Verified
+            <div className="bg-emerald-950/40 border border-emerald-500/30 rounded-xl p-3 text-xs text-emerald-300 space-y-1">
+              <span className="font-bold flex items-center gap-1 text-emerald-400">
+                <ShieldCheck className="w-4 h-4 text-emerald-400" /> EasyOCR Extraction Verified
               </span>
               <p>Document: {formData.ocrData.documentType} • Number: {formData.ocrData.dlNumber}</p>
             </div>
@@ -273,33 +273,33 @@ export const VehicleListingWizard = ({ isOpen, onClose, onVehicleCreated }) => {
       {/* Step 5: Review */}
       {currentStep === 5 && (
         <div className="space-y-4 animate-in fade-in duration-200">
-          <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-indigo-600" /> Step 5: Review & Publish Listing
+          <h3 className="text-sm font-bold text-zinc-100 flex items-center gap-2">
+            <ShieldCheck className="w-4 h-4 text-indigo-400" /> Step 5: Review & Publish Listing
           </h3>
 
-          <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 text-xs space-y-2">
+          <div className="bg-zinc-950/60 border border-zinc-800 rounded-2xl p-4 text-xs space-y-2">
             <div className="flex justify-between">
-              <span className="text-slate-500">Vehicle:</span>
-              <span className="font-bold text-slate-900">{formData.make} {formData.model} ({formData.year})</span>
+              <span className="text-zinc-400">Vehicle:</span>
+              <span className="font-bold text-zinc-100">{formData.make} {formData.model} ({formData.year})</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-500">Plate Number:</span>
-              <span className="font-mono font-bold text-indigo-600">{formData.plateNumber}</span>
+              <span className="text-zinc-400">Plate Number:</span>
+              <span className="font-mono font-bold text-indigo-400">{formData.plateNumber}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-500">Daily Rate:</span>
-              <span className="font-bold text-slate-900">₹{formData.baseDailyRate}/day</span>
+              <span className="text-zinc-400">Daily Rate:</span>
+              <span className="font-bold text-zinc-100 font-mono">₹{formData.baseDailyRate}/day</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-slate-500">Security Deposit:</span>
-              <span className="font-bold text-slate-900">₹{formData.securityDeposit}</span>
+              <span className="text-zinc-400">Security Deposit:</span>
+              <span className="font-bold text-zinc-100 font-mono">₹{formData.securityDeposit}</span>
             </div>
           </div>
         </div>
       )}
 
       {/* Wizard Footer Controls */}
-      <div className="flex items-center justify-between pt-6 mt-6 border-t border-slate-100">
+      <div className="flex items-center justify-between pt-6 mt-6 border-t border-zinc-800">
         {currentStep > 1 ? (
           <Button variant="outline" size="sm" leftIcon={ArrowLeft} onClick={() => setCurrentStep((s) => s - 1)}>
             Back
@@ -307,11 +307,11 @@ export const VehicleListingWizard = ({ isOpen, onClose, onVehicleCreated }) => {
         ) : <div />}
 
         {currentStep < 5 ? (
-          <Button variant="primary" size="sm" rightIcon={ArrowRight} onClick={() => setCurrentStep((s) => s + 1)}>
+          <Button variant="primary" size="sm" rightIcon={ArrowRight} onClick={() => setCurrentStep((s) => s + 1)} className="font-bold shadow-[0_0_15px_rgba(99,102,241,0.25)]">
             Next Step
           </Button>
         ) : (
-          <Button variant="primary" size="sm" isLoading={isSubmitting} leftIcon={Check} onClick={handleSubmit}>
+          <Button variant="primary" size="sm" isLoading={isSubmitting} leftIcon={Check} onClick={handleSubmit} className="font-bold shadow-[0_0_20px_rgba(99,102,241,0.3)]">
             Publish Fleet Listing
           </Button>
         )}

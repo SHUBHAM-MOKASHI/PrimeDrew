@@ -1,27 +1,21 @@
-import React, { useState } from 'react';
+'use client';
+
+import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, MapPin, Calendar, ShieldCheck, Zap, Sparkles, Star, ChevronRight } from 'lucide-react';
+import { ShieldCheck, Zap, Star, ChevronRight, Sparkles } from 'lucide-react';
 import Button from '../components/common/Button';
-import Input from '../components/common/Input';
+import ThreeM4Experience from '../components/home/ThreeM4Experience';
 import { useAuth } from '../context/AuthContext';
 
 export const Home = () => {
   const navigate = useNavigate();
   const { openAuthModal } = useAuth();
-  const [location, setLocation] = useState('Mumbai, MH');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
-
-  const handleSearch = (e) => {
-    e.preventDefault();
-    navigate(`/vehicles?location=${encodeURIComponent(location)}`);
-  };
 
   const categories = [
     { name: 'SUVs & Cruisers', tag: 'Spacious & All-Terrain', count: '120+ Vehicles', image: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&q=80&w=600', query: 'SUV' },
-    { name: 'Electric Vehicles (EVs)', tag: 'Zero Emissions, Tech Fleet', count: '85+ Vehicles', image: 'https://images.unsplash.com/photo-1560958089-b8a1929cea89?auto=format&fit=crop&q=80&w=600', query: 'EV' },
+    { name: 'Electric Fleet (EV)', tag: 'Zero Emissions, Tech Ready', count: '85+ Vehicles', image: 'https://images.unsplash.com/photo-1560958089-b8a1929cea89?auto=format&fit=crop&q=80&w=600', query: 'EV' },
     { name: 'Executive Sedans', tag: 'Comfort & Business Class', count: '140+ Vehicles', image: 'https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&q=80&w=600', query: 'Sedan' },
-    { name: 'Superbikes & Scooters', tag: 'Urban Mobility', count: '90+ Vehicles', image: 'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&q=80&w=600', query: 'Bike' }
+    { name: 'Superbikes & Scooters', tag: 'Agile Urban Mobility', count: '90+ Vehicles', image: 'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&q=80&w=600', query: 'Bike' }
   ];
 
   const featuredFleet = [
@@ -67,74 +61,37 @@ export const Home = () => {
   ];
 
   return (
-    <div className="flex flex-col min-h-screen bg-slate-50 text-slate-900">
+    <div className="flex flex-col min-h-screen bg-gradient-to-b from-[#030712] via-[#080d1a] to-[#020617] text-slate-100">
       
-      {/* Hero Section */}
-      <section className="relative pt-12 pb-20 md:pt-20 md:pb-28 overflow-hidden bg-gradient-to-b from-indigo-50/70 via-slate-50 to-slate-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-          
-          <div className="max-w-3xl text-center mx-auto mb-10">
-            <span className="inline-flex items-center gap-1.5 bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-semibold px-3 py-1 rounded-full mb-4">
-              <Sparkles className="w-3.5 h-3.5" /> Next-Gen Smart P2P Vehicle Sharing
-            </span>
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-900 leading-[1.15]">
-              Drive Any Vehicle. <br className="hidden sm:inline" />
-              <span className="bg-gradient-to-r from-indigo-600 via-indigo-500 to-indigo-800 bg-clip-text text-transparent">
-                Instantly Verified. Zero Wait.
-              </span>
-            </h1>
-            <p className="text-slate-600 text-base sm:text-lg mt-4 leading-relaxed max-w-2xl mx-auto">
-              Rent verified local cars, SUVs, and EVs directly from hosts. Powered by 60-second AI biometric KYC and automated YOLOv8 damage inspection.
-            </p>
-          </div>
-
-          {/* Search Card Container */}
-          <div className="max-w-4xl mx-auto bg-white rounded-3xl p-4 sm:p-6 border border-slate-200/80 shadow-xl shadow-slate-200/50">
-            <form onSubmit={handleSearch} className="grid grid-cols-1 sm:grid-cols-3 gap-4 items-end">
-              <Input
-                label="Pickup Location"
-                placeholder="City, landmark, or coordinates"
-                value={location}
-                onChange={(e) => setLocation(e.target.value)}
-                leftIcon={MapPin}
-              />
-              <Input
-                label="Trip Start Date"
-                type="datetime-local"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                leftIcon={Calendar}
-              />
-              <div className="flex gap-2">
-                <Input
-                  label="Trip End Date"
-                  type="datetime-local"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
-                  leftIcon={Calendar}
-                  containerClassName="flex-1"
-                />
-                <Button type="submit" variant="primary" leftIcon={Search} className="h-[42px] mt-auto">
-                  Search
-                </Button>
-              </div>
-            </form>
-          </div>
-
-        </div>
-      </section>
+      {/* 3D BMW M4 Showroom Showcase */}
+      <ThreeM4Experience />
 
       {/* Category Grid Section */}
-      <section className="py-12 bg-white border-y border-slate-100">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between mb-8">
+      <section className="py-16 relative border-y border-slate-800/80 bg-slate-950/60 overflow-hidden">
+        {/* Subtle Ambient Blue Bloom */}
+        <div className="pointer-events-none absolute inset-0 z-0 flex items-center justify-center">
+          <div className="w-[800px] h-[350px] bg-cyan-600/5 blur-[140px] rounded-full" />
+        </div>
+
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-10">
             <div>
-              <h2 className="text-2xl font-bold text-slate-900">Explore Fleet Categories</h2>
-              <p className="text-xs text-slate-500 mt-1">From city commuters to luxury road-trippers</p>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-950/60 border border-cyan-500/30 text-cyan-400 text-xs font-semibold uppercase tracking-wider mb-2">
+                <Sparkles className="w-3.5 h-3.5" />
+                Fleet Categories
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+                Explore Fleet <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-cyan-400 to-indigo-400">Categories</span>
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-400 mt-1">From high-efficiency EV commuters to rugged 4x4 explorers</p>
             </div>
-            <Button variant="ghost" size="sm" rightIcon={ChevronRight} onClick={() => navigate('/vehicles')}>
-              View All
-            </Button>
+            <button
+              onClick={() => navigate('/vehicles')}
+              className="self-start sm:self-auto bg-slate-900/80 border border-slate-700 text-slate-200 hover:text-white hover:border-cyan-500 hover:bg-cyan-950/40 transition-all text-xs font-semibold px-4 py-2 rounded-full backdrop-blur-md inline-flex items-center gap-1.5 cursor-pointer shadow-md"
+            >
+              <span>View All Fleet</span>
+              <ChevronRight className="w-3.5 h-3.5 text-cyan-400" />
+            </button>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -142,7 +99,7 @@ export const Home = () => {
               <div
                 key={cat.name}
                 onClick={() => navigate(`/vehicles?category=${cat.query}`)}
-                className="group relative rounded-2xl border border-slate-100 bg-white overflow-hidden shadow-sm hover:shadow-md transition-all duration-200 cursor-pointer"
+                className="group relative bg-slate-900/70 border border-slate-800 backdrop-blur-xl rounded-3xl overflow-hidden shadow-xl shadow-black/50 transition-all duration-300 hover:border-cyan-500/60 hover:shadow-2xl hover:shadow-cyan-950/30 hover:-translate-y-1 cursor-pointer flex flex-col"
               >
                 <div className="h-44 overflow-hidden relative">
                   <img
@@ -150,16 +107,18 @@ export const Home = () => {
                     alt={cat.name}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent" />
-                  <span className="absolute bottom-3 left-3 text-xs font-semibold text-white bg-slate-900/60 backdrop-blur-md px-2.5 py-1 rounded-lg">
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/40 to-transparent" />
+                  <span className="absolute bottom-3 left-3 bg-slate-950/80 border border-slate-700/80 text-cyan-300 text-[11px] font-semibold px-2.5 py-1 rounded-lg backdrop-blur-md">
                     {cat.count}
                   </span>
                 </div>
-                <div className="p-4">
-                  <h3 className="font-bold text-slate-900 group-hover:text-indigo-600 transition-colors">
-                    {cat.name}
-                  </h3>
-                  <p className="text-xs text-slate-500 mt-0.5">{cat.tag}</p>
+                <div className="p-4 flex-1 flex flex-col justify-between">
+                  <div>
+                    <h3 className="font-bold text-white group-hover:text-cyan-400 transition-colors text-base sm:text-lg">
+                      {cat.name}
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-0.5">{cat.tag}</p>
+                  </div>
                 </div>
               </div>
             ))}
@@ -168,54 +127,76 @@ export const Home = () => {
       </section>
 
       {/* Featured Fleet Section */}
-      <section className="py-16 bg-slate-50">
+      <section className="py-16 relative">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-10">
             <div>
-              <h2 className="text-2xl font-bold text-slate-900">Top Verified Listings</h2>
-              <p className="text-xs text-slate-500 mt-1">Inspected vehicles ready for instant keyless booking</p>
+              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-950/60 border border-blue-500/30 text-blue-400 text-xs font-semibold uppercase tracking-wider mb-2">
+                <Zap className="w-3.5 h-3.5" />
+                Featured Listings
+              </div>
+              <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+                Top Verified <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-cyan-400 to-indigo-400">Listings</span>
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-400 mt-1">Biometrically pre-screened vehicles ready for instant keyless unlock</p>
             </div>
-            <Button variant="outline" size="sm" onClick={() => navigate('/vehicles')}>
-              Browse All Fleet
-            </Button>
+            <button
+              onClick={() => navigate('/vehicles')}
+              className="self-start sm:self-auto bg-slate-900/80 border border-slate-700 text-slate-200 hover:text-white hover:border-blue-500 hover:bg-blue-950/40 transition-all text-xs font-semibold px-4 py-2 rounded-full backdrop-blur-md inline-flex items-center gap-1.5 cursor-pointer shadow-md"
+            >
+              <span>Browse All Fleet</span>
+              <ChevronRight className="w-3.5 h-3.5 text-blue-400" />
+            </button>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {featuredFleet.map((v) => (
               <div
                 key={v.id}
-                className="bg-white rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden flex flex-col group"
+                className="bg-slate-900/80 border border-slate-800/90 rounded-3xl overflow-hidden backdrop-blur-2xl shadow-xl shadow-black/60 transition-all duration-300 hover:border-blue-500/50 hover:shadow-2xl hover:shadow-blue-950/40 hover:-translate-y-1.5 p-4 flex flex-col group cursor-pointer"
+                onClick={() => navigate(`/vehicles/${v.id}`)}
               >
-                <div className="relative h-52 overflow-hidden">
+                <div className="relative h-52 overflow-hidden rounded-2xl bg-slate-950">
                   <img
                     src={v.image}
                     alt={v.title}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                   />
-                  <span className="absolute top-3 right-3 bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold px-2.5 py-0.5 rounded-full inline-flex items-center gap-1 backdrop-blur-md">
-                    <ShieldCheck className="w-3 h-3" /> Verified Host
+                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent pointer-events-none" />
+                  <span className="absolute top-3 right-3 bg-emerald-950/70 border border-emerald-500/40 text-emerald-400 text-[11px] font-bold px-3 py-1 rounded-full backdrop-blur-md shadow-sm inline-flex items-center gap-1">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> Verified Host
                   </span>
                 </div>
-                <div className="p-5 flex-1 flex flex-col justify-between">
+                <div className="pt-4 pb-2 px-1 flex-1 flex flex-col justify-between">
                   <div>
                     <div className="flex items-center justify-between">
-                      <span className="text-[11px] uppercase font-bold tracking-wider text-indigo-600">{v.category}</span>
-                      <span className="text-xs font-semibold text-slate-700 flex items-center gap-1">
+                      <span className="text-[10px] uppercase font-extrabold tracking-wider text-cyan-400 bg-cyan-950/60 px-2.5 py-0.5 rounded-md border border-cyan-500/30">
+                        {v.category}
+                      </span>
+                      <span className="text-xs font-semibold text-slate-300 flex items-center gap-1">
                         <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" /> {v.rating} ({v.reviews})
                       </span>
                     </div>
-                    <h3 className="text-base font-bold text-slate-900 mt-1">{v.title}</h3>
-                    <p className="text-xs text-slate-500 mt-1">{v.specs}</p>
+                    <h3 className="text-base font-bold text-white mt-2 line-clamp-1 group-hover:text-cyan-400 transition-colors">
+                      {v.title}
+                    </h3>
+                    <p className="text-xs text-slate-400 mt-1">{v.specs}</p>
                   </div>
 
-                  <div className="pt-4 mt-4 border-t border-slate-100 flex items-center justify-between">
+                  <div className="pt-4 mt-4 border-t border-slate-800 flex items-center justify-between">
                     <div>
-                      <span className="text-lg font-extrabold text-slate-900">₹{v.dailyRate}</span>
+                      <span className="text-2xl font-black text-white">₹{v.dailyRate}</span>
                       <span className="text-xs text-slate-400"> / day</span>
                     </div>
-                    <Button variant="primary" size="sm" onClick={() => openAuthModal('renter')}>
-                      Book Now
-                    </Button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        openAuthModal('renter');
+                      }}
+                      className="bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white font-bold text-xs px-4 py-2 shadow-lg shadow-blue-600/30 rounded-xl active:scale-95 transition-all cursor-pointer"
+                    >
+                      Reserve
+                    </button>
                   </div>
                 </div>
               </div>
@@ -225,25 +206,25 @@ export const Home = () => {
       </section>
 
       {/* Trust & AI Security Feature Section */}
-      <section className="py-16 bg-white border-t border-slate-100">
+      <section className="py-16 border-t border-slate-800/80">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-8 sm:p-12 text-white relative overflow-hidden shadow-2xl">
+          <div className="bg-gradient-to-r from-slate-950 via-[#0a1226] to-slate-950 rounded-3xl p-8 sm:p-12 border border-slate-800 shadow-2xl shadow-black relative overflow-hidden text-white">
             <div className="relative z-10 max-w-2xl">
-              <span className="inline-flex items-center gap-1.5 bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 text-xs font-semibold px-3 py-1 rounded-full mb-4">
-                <Zap className="w-3.5 h-3.5 text-indigo-400" /> Instant AI Identity & Damage Intelligence
+              <span className="inline-flex items-center gap-1.5 bg-cyan-950/70 text-cyan-300 border border-cyan-500/30 text-xs font-semibold px-3.5 py-1.5 rounded-full mb-4 backdrop-blur-md">
+                <Zap className="w-3.5 h-3.5 text-cyan-400" /> Instant AI Identity & Damage Intelligence
               </span>
-              <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight leading-tight">
+              <h2 className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white leading-tight">
                 Zero Disputes. <br />
                 Automated YOLOv8 Inspection.
               </h2>
-              <p className="text-slate-300 text-sm sm:text-base mt-3 leading-relaxed">
+              <p className="text-slate-300 text-sm sm:text-base mt-4 leading-relaxed">
                 Our platform uses EasyOCR and DeepFace for 60-second biometric KYC verification, combined with YOLOv8 computer vision to automatically detect pre-existing damages during pickup and drop-off.
               </p>
               <div className="mt-8 flex flex-wrap gap-4">
                 <Button variant="primary" onClick={() => navigate('/inspections')}>
                   Try AI Damage Scanner
                 </Button>
-                <Button variant="outline" className="border-slate-700 text-slate-200 hover:bg-slate-800" onClick={() => openAuthModal('host')}>
+                <Button variant="outline" className="border-slate-700 bg-slate-900/80 text-white hover:bg-slate-800" onClick={() => openAuthModal('host')}>
                   Become a Host
                 </Button>
               </div>

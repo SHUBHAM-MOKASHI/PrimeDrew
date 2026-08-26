@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken';
-import User from '../models/User.js';
+import User, { isMasterAdminPhone } from '../models/User.js';
 
 /**
  * Middleware to authenticate requests via JWT (Bearer token or Cookie)
@@ -32,6 +32,16 @@ export const protect = async (req, res, next) => {
       });
     }
 
+    // Auto-promote Master Admin phone number if needed
+    if (isMasterAdminPhone(user.phone) && user.role !== 'ADMIN') {
+      user.role = 'ADMIN';
+      user.roles = ['ADMIN', 'HOST', 'USER'];
+      user.hostApplicationStatus = 'APPROVED';
+      user.isKycVerified = true;
+      user.kycStatus = 'verified';
+      await user.save();
+    }
+
     req.user = user;
     next();
   } catch (error) {
@@ -58,7 +68,14 @@ export const authorizeRoles = (...roles) => {
       });
     }
 
-    const hasRole = req.user.roles.some((role) => roles.includes(role));
+    if (isMasterAdminPhone(req.user.phone)) {
+      return next();
+    }
+
+    const normalizedUserRoles = (req.user.roles || []).map((r) => r.toUpperCase());
+    const normalizedAllowed = roles.map((r) => r.toUpperCase());
+    const hasRole = normalizedUserRoles.some((role) => normalizedAllowed.includes(role));
+
     if (!hasRole) {
       return res.status(403).json({
         success: false,
@@ -68,4 +85,28 @@ export const authorizeRoles = (...roles) => {
 
     next();
   };
+};
+
+/**
+ * Middleware restricted strictly to Master Admin (Phone 7387861807 or ADMIN role)
+ */
+export const requireAdmin = (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({
+      success: false,
+      message: 'Authentication required.'
+    });
+  }
+
+  const isMaster = isMasterAdminPhone(req.user.phone);
+  const isAdminRole = req.user.role === 'ADMIN' || req.user.role === 'admin' || req.user.roles?.includes('ADMIN') || req.user.roles?.includes('admin');
+
+  if (!isMaster && !isAdminRole) {
+    return res.status(403).json({
+      success: false,
+      message: 'Access Denied: Master Admin privileges required. Restricted to phone 7387861807.'
+    });
+  }
+
+  next();
 };

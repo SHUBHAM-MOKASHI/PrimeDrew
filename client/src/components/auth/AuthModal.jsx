@@ -152,23 +152,23 @@ export const AuthModal = () => {
       className="p-0 overflow-hidden"
     >
       {/* Header Tabs */}
-      <div className="bg-slate-50 border-b border-slate-100 p-1.5 flex gap-1 rounded-t-2xl">
+      <div className="bg-zinc-900/60 border-b border-zinc-800 p-1.5 flex gap-1 rounded-t-2xl">
         <button
           onClick={() => handleTabChange('renter')}
-          className={`flex-1 text-xs font-semibold py-2.5 rounded-xl transition-all ${
+          className={`flex-1 text-xs font-semibold py-2.5 rounded-xl transition-all cursor-pointer ${
             authModalTab === 'renter'
-              ? 'bg-white text-indigo-600 shadow-sm'
-              : 'text-slate-500 hover:text-slate-800'
+              ? 'bg-zinc-800 text-zinc-100 shadow-sm border border-zinc-700/60 font-bold'
+              : 'text-zinc-400 hover:text-zinc-200'
           }`}
         >
           Renter Sign In
         </button>
         <button
           onClick={() => handleTabChange('host')}
-          className={`flex-1 text-xs font-semibold py-2.5 rounded-xl transition-all ${
+          className={`flex-1 text-xs font-semibold py-2.5 rounded-xl transition-all cursor-pointer ${
             authModalTab === 'host'
-              ? 'bg-white text-indigo-600 shadow-sm'
-              : 'text-slate-500 hover:text-slate-800'
+              ? 'bg-zinc-800 text-zinc-100 shadow-sm border border-zinc-700/60 font-bold'
+              : 'text-zinc-400 hover:text-zinc-200'
           }`}
         >
           Host Onboarding
@@ -179,10 +179,10 @@ export const AuthModal = () => {
         {step === 'phone' && (
           <div className="flex flex-col gap-5 animate-in fade-in duration-200">
             <div className="text-center">
-              <h2 className="text-xl font-bold text-slate-900">
+              <h2 className="text-xl font-bold text-zinc-100">
                 {authModalTab === 'host' ? 'Earn by Hosting Your Vehicle' : 'Instant P2P Rental Access'}
               </h2>
-              <p className="text-xs text-slate-500 mt-1">
+              <p className="text-xs text-zinc-400 mt-1">
                 {authModalTab === 'host'
                   ? 'List your car, SUV or EV & connect with verified renters.'
                   : 'Book verified vehicles in 60 seconds with instant AI verification.'}
@@ -194,7 +194,7 @@ export const AuthModal = () => {
               variant="outline"
               onClick={handleGoogleLogin}
               isLoading={isLoading}
-              className="w-full justify-center gap-2 py-3 border-slate-200 hover:bg-slate-50"
+              className="w-full justify-center gap-2.5 py-3 border-zinc-800 hover:bg-zinc-850 hover:border-zinc-700"
             >
               <svg className="w-4 h-4" viewBox="0 0 24 24">
                 <path
@@ -219,8 +219,8 @@ export const AuthModal = () => {
 
             {/* Divider */}
             <div className="relative flex items-center justify-center my-1">
-              <div className="border-t border-slate-100 w-full" />
-              <span className="bg-white px-3 text-[11px] uppercase tracking-wider font-semibold text-slate-400 absolute">
+              <div className="border-t border-zinc-800 w-full" />
+              <span className="bg-zinc-950 px-3 text-[11px] uppercase tracking-wider font-semibold text-zinc-500 absolute">
                 Or sign in with phone
               </span>
             </div>
@@ -236,7 +236,7 @@ export const AuthModal = () => {
                 leftIcon={Phone}
                 error={error}
               />
-              <Button type="submit" variant="primary" isLoading={isLoading} rightIcon={ArrowRight} className="w-full py-3">
+              <Button type="submit" variant="primary" isLoading={isLoading} rightIcon={ArrowRight} className="w-full py-3 font-bold">
                 Send 4-Digit OTP
               </Button>
             </form>
@@ -246,9 +246,9 @@ export const AuthModal = () => {
         {step === 'otp' && (
           <div className="flex flex-col gap-5 animate-in fade-in duration-200">
             <div className="text-center">
-              <h2 className="text-xl font-bold text-slate-900">Enter Verification Code</h2>
-              <p className="text-xs text-slate-500 mt-1">
-                We sent a 4-digit code to <span className="font-semibold text-slate-700">{phoneNumber}</span>
+              <h2 className="text-xl font-bold text-zinc-100">Enter Verification Code</h2>
+              <p className="text-xs text-zinc-400 mt-1">
+                We sent a 4-digit code to <span className="font-semibold text-zinc-200 font-mono">{phoneNumber}</span>
               </p>
             </div>
 
@@ -263,25 +263,25 @@ export const AuthModal = () => {
                   value={digit}
                   onChange={(e) => handleOtpChange(index, e.target.value)}
                   onKeyDown={(e) => handleKeyDown(index, e)}
-                  className="w-12 h-14 text-center text-xl font-bold rounded-xl border border-slate-200 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10 outline-none transition-all"
+                  className="w-12 h-14 text-center text-xl font-bold rounded-xl border border-zinc-800 bg-zinc-900/80 text-zinc-100 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20 outline-none transition-all"
                 />
               ))}
             </div>
 
-            {error && <p className="text-xs font-medium text-rose-600 text-center">{error}</p>}
+            {error && <p className="text-xs font-medium text-rose-400 text-center">{error}</p>}
 
-            <Button onClick={handleVerifyOtp} variant="primary" isLoading={isLoading} className="w-full py-3">
+            <Button onClick={handleVerifyOtp} variant="primary" isLoading={isLoading} className="w-full py-3 font-bold">
               Verify & Continue
             </Button>
 
             <div className="text-center">
               {timer > 0 ? (
-                <p className="text-xs text-slate-400">Resend OTP code in {timer}s</p>
+                <p className="text-xs text-zinc-500">Resend OTP code in {timer}s</p>
               ) : (
                 <button
                   type="button"
                   onClick={() => setTimer(30)}
-                  className="text-xs font-semibold text-indigo-600 hover:underline"
+                  className="text-xs font-semibold text-indigo-400 hover:text-indigo-300 hover:underline cursor-pointer"
                 >
                   Resend OTP Code
                 </button>
@@ -292,31 +292,31 @@ export const AuthModal = () => {
 
         {step === 'kyc-banner' && (
           <div className="flex flex-col items-center text-center gap-4 py-2 animate-in zoom-in-95 duration-200">
-            <div className="w-14 h-14 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center">
+            <div className="w-14 h-14 rounded-2xl bg-emerald-950/80 border border-emerald-500/30 text-emerald-400 flex items-center justify-center shadow-[0_0_20px_rgba(16,185,129,0.3)]">
               <CheckCircle2 className="w-8 h-8" />
             </div>
             <div>
-              <h3 className="text-lg font-bold text-slate-900">Signed In Successfully!</h3>
-              <p className="text-xs text-slate-500 mt-1">
+              <h3 className="text-lg font-bold text-zinc-100">Signed In Successfully!</h3>
+              <p className="text-xs text-zinc-400 mt-1">
                 Unlock instant bookings with AI-powered document & selfie verification.
               </p>
             </div>
 
             {/* Progressive KYC Banner */}
-            <div className="w-full bg-gradient-to-br from-indigo-50 to-emerald-50 border border-indigo-100 rounded-2xl p-4 text-left flex items-start gap-3 mt-2">
-              <div className="p-2 bg-indigo-600 text-white rounded-xl mt-0.5">
+            <div className="w-full bg-gradient-to-br from-indigo-950/40 via-zinc-900 to-emerald-950/30 border border-indigo-500/30 rounded-2xl p-4 text-left flex items-start gap-3 mt-2 shadow-md">
+              <div className="p-2 bg-indigo-600 text-white rounded-xl mt-0.5 shadow-xs">
                 <Sparkles className="w-4 h-4" />
               </div>
               <div>
-                <span className="text-xs font-bold text-indigo-950 block">60-Second AI Verification</span>
-                <p className="text-[11px] text-slate-600 leading-snug mt-0.5">
+                <span className="text-xs font-bold text-zinc-100 block">60-Second AI Verification</span>
+                <p className="text-[11px] text-zinc-400 leading-snug mt-0.5">
                   Verify your Driving License and selfie to enjoy keyless pickups and zero-wait bookings.
                 </p>
               </div>
             </div>
 
-            <Button onClick={closeAuthModal} variant="primary" className="w-full py-3 mt-2">
-              Continue to Workspace
+            <Button onClick={closeAuthModal} variant="primary" className="w-full py-3 mt-2 font-bold">
+              Continue to Fleet
             </Button>
           </div>
         )}
@@ -326,3 +326,4 @@ export const AuthModal = () => {
 };
 
 export default AuthModal;
+

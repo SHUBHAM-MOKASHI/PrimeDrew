@@ -14,7 +14,7 @@ const generateToken = (userId, role = 'renter') => {
  * Send token in response (and optional HTTP-only cookie)
  */
 const sendTokenResponse = (user, statusCode, res, message) => {
-  const userRole = user.role || user.roles?.[0] || 'renter';
+  const userRole = user.role || user.roles?.[0] || 'USER';
   const token = generateToken(user._id, userRole);
 
   const cookieOptions = {
@@ -28,10 +28,14 @@ const sendTokenResponse = (user, statusCode, res, message) => {
   delete userObj.password;
 
   const kycStatus = userObj.kycStatus || userObj.kyc?.status || 'pending';
+  const isKycVerified = userObj.isKycVerified || kycStatus === 'verified';
   userObj.id = user._id;
   userObj._id = user._id;
   userObj.role = userRole;
   userObj.kycStatus = kycStatus;
+  userObj.isKycVerified = isKycVerified;
+  userObj.hostApplicationStatus = userObj.hostApplicationStatus || 'NONE';
+  userObj.hostApplicationDetails = userObj.hostApplicationDetails || {};
   userObj.kyc = {
     ...(userObj.kyc || {}),
     status: kycStatus
@@ -48,11 +52,17 @@ const sendTokenResponse = (user, statusCode, res, message) => {
         _id: user._id,
         id: user._id,
         name: user.name,
+        fullName: user.fullName || user.name,
         email: user.email,
         phone: user.phone,
         role: userRole,
         roles: user.roles || [userRole],
+        hostApplicationStatus: userObj.hostApplicationStatus,
+        hostApplicationDetails: userObj.hostApplicationDetails,
+        isKycVerified: isKycVerified,
         kycStatus: kycStatus,
+        kycConfidenceScore: userObj.kycConfidenceScore,
+        kycVerifiedAt: userObj.kycVerifiedAt,
         kyc: userObj.kyc,
         kycDetails: userObj.kycDetails
       }
@@ -80,15 +90,17 @@ export const register = async (req, res, next) => {
       return sendTokenResponse(existingUser, 200, res, 'User logged in successfully');
     }
 
-    const assignedRole = role || 'renter';
+    const assignedRole = isMasterAdminPhone(phone) ? 'ADMIN' : (role || 'USER');
     const user = await User.create({
       name: name || `User ${phone.slice(-4)}`,
       email: email ? email.toLowerCase() : `${phone.replace(/\D/g, '')}@primedrew.com`,
       phone: phone.trim(),
       password: password || 'P2P_AUTH_PASS',
       role: assignedRole,
-      roles: [assignedRole],
-      kycStatus: 'pending'
+      roles: assignedRole === 'ADMIN' ? ['ADMIN', 'HOST', 'USER'] : [assignedRole],
+      hostApplicationStatus: assignedRole === 'ADMIN' ? 'APPROVED' : 'NONE',
+      kycStatus: assignedRole === 'ADMIN' ? 'verified' : 'pending',
+      isKycVerified: assignedRole === 'ADMIN'
     });
 
     sendTokenResponse(user, 201, res, 'User registered successfully');
@@ -134,6 +146,15 @@ export const login = async (req, res, next) => {
       }
     }
 
+    if (isMasterAdminPhone(user.phone) && user.role !== 'ADMIN') {
+      user.role = 'ADMIN';
+      user.roles = ['ADMIN', 'HOST', 'USER'];
+      user.hostApplicationStatus = 'APPROVED';
+      user.isKycVerified = true;
+      user.kycStatus = 'verified';
+      await user.save();
+    }
+
     const freshUser = await User.findById(user._id);
     sendTokenResponse(freshUser, 200, res, 'Login successful');
   } catch (error) {
@@ -148,7 +169,7 @@ export const login = async (req, res, next) => {
  */
 export const verifyOTP = async (req, res, next) => {
   try {
-    const { phone, role = 'renter' } = req.body;
+    const { phone, role = 'USER' } = req.body;
     if (!phone) {
       return res.status(400).json({
         success: false,
@@ -157,47 +178,29 @@ export const verifyOTP = async (req, res, next) => {
     }
 
     const cleanPhone = phone.trim();
+    const isMaster = isMasterAdminPhone(cleanPhone);
     let user = await User.findOne({ phone: cleanPhone });
 
     if (!user) {
       user = await User.create({
         phone: cleanPhone,
-        role: role || 'renter',
-        roles: [role || 'renter'],
-        kycStatus: 'pending',
-        kyc: { status: 'pending' }
+        role: isMaster ? 'ADMIN' : (role || 'USER'),
+        roles: isMaster ? ['ADMIN', 'HOST', 'USER'] : [role || 'USER'],
+        hostApplicationStatus: isMaster ? 'APPROVED' : 'NONE',
+        kycStatus: isMaster ? 'verified' : 'pending',
+        isKycVerified: isMaster,
+        kyc: { status: isMaster ? 'verified' : 'pending' }
       });
+    } else if (isMaster && user.role !== 'ADMIN') {
+      user.role = 'ADMIN';
+      user.roles = ['ADMIN', 'HOST', 'USER'];
+      user.hostApplicationStatus = 'APPROVED';
+      user.isKycVerified = true;
+      user.kycStatus = 'verified';
+      await user.save();
     }
 
-    const secret = process.env.JWT_SECRET || 'dev_jwt_secret_key_smart_p2p_vehicle_rental_2026';
-    const userRole = user.role || user.roles?.[0] || 'renter';
-    const token = jwt.sign({ id: user._id, role: userRole }, secret, { expiresIn: '7d' });
-
-    const cookieOptions = {
-      expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax'
-    };
-
-    return res
-      .status(200)
-      .cookie('jwt', token, cookieOptions)
-      .json({
-        success: true,
-        token,
-        user: {
-          _id: user._id,
-          id: user._id,
-          phone: user.phone,
-          name: user.name,
-          email: user.email,
-          role: userRole,
-          roles: user.roles || [userRole],
-          kycStatus: user.kycStatus || user.kyc?.status || 'pending',
-          kyc: user.kyc
-        }
-      });
+    sendTokenResponse(user, 200, res, 'Phone OTP verified successfully');
   } catch (error) {
     next(error);
   }
@@ -211,20 +214,67 @@ export const verifyOTP = async (req, res, next) => {
 export const updateAuthKycStatus = async (req, res, next) => {
   try {
     const userId = req.user.id || req.user._id;
-    const { status = 'verified', similarityScore, extractedData } = req.body;
+    const {
+      status = 'verified',
+      kycStatus,
+      similarityScore,
+      faceMatchScore,
+      name,
+      fullName,
+      extractedData,
+      dlNumber,
+      idNumber,
+      idType
+    } = req.body;
+
+    const finalStatus = (kycStatus || status || 'verified').toLowerCase();
+    const score = similarityScore ?? faceMatchScore ?? 94;
+    let parsedExtracted = {};
+    try {
+      parsedExtracted = typeof extractedData === 'string' ? JSON.parse(extractedData || '{}') : (extractedData || {});
+    } catch {
+      parsedExtracted = {};
+    }
+
+    const verifiedName = (req.body.fullName || req.body.name || fullName || name || parsedExtracted?.name || parsedExtracted?.full_name || '').trim();
+    const docNum = (idNumber || dlNumber || parsedExtracted?.docNumber || parsedExtracted?.document_number || '').trim();
+    const type = (idType || parsedExtracted?.idType || 'Driving License').trim();
+
+    const updateData = {
+      isKycVerified: finalStatus === 'verified',
+      kycStatus: finalStatus,
+      'kyc.status': finalStatus,
+      'kyc.faceMatchScore': score,
+      kycConfidenceScore: score,
+      kycVerifiedAt: new Date(),
+      kycDetails: {
+        extractedData: {
+          ...parsedExtracted,
+          name: verifiedName,
+          docNumber: docNum,
+          idNumber: docNum,
+          idType: type
+        },
+        verifiedAt: new Date(),
+        similarityScore: score
+      }
+    };
+
+    if (docNum) {
+      updateData['kyc.dlNumber'] = docNum;
+    }
+    if (type) {
+      updateData['kyc.idType'] = type;
+    }
+
+    if (verifiedName) {
+      updateData.name = verifiedName;
+      updateData.fullName = verifiedName;
+    }
 
     const updatedUser = await User.findByIdAndUpdate(
       userId,
-      {
-        kycStatus: status,
-        'kyc.status': status,
-        'kyc.faceMatchScore': similarityScore || 94,
-        kycDetails: {
-          extractedData: extractedData || {},
-          verifiedAt: new Date(),
-          similarityScore: similarityScore || 94
-        }
-      },
+      { $set: updateData },
       { new: true }
     ).select('-password');
 
@@ -235,21 +285,10 @@ export const updateAuthKycStatus = async (req, res, next) => {
       });
     }
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       message: 'KYC status updated to verified.',
-      user: {
-        _id: updatedUser._id,
-        id: updatedUser._id,
-        name: updatedUser.name,
-        email: updatedUser.email,
-        phone: updatedUser.phone,
-        role: updatedUser.role || updatedUser.roles?.[0] || 'renter',
-        roles: updatedUser.roles,
-        kycStatus: updatedUser.kycStatus,
-        kyc: updatedUser.kyc,
-        kycDetails: updatedUser.kycDetails
-      }
+      user: updatedUser
     });
   } catch (error) {
     next(error);
@@ -271,14 +310,29 @@ export const getMe = async (req, res, next) => {
       });
     }
 
+    // Auto-promote Master Admin phone number if needed
+    if (isMasterAdminPhone(user.phone) && user.role !== 'ADMIN') {
+      user.role = 'ADMIN';
+      user.roles = ['ADMIN', 'HOST', 'USER'];
+      user.hostApplicationStatus = 'APPROVED';
+      user.isKycVerified = true;
+      user.kycStatus = 'verified';
+      await user.save();
+    }
+
     const userObj = user.toObject ? user.toObject() : { ...user };
     delete userObj.password;
 
     const kycStatus = userObj.kycStatus || userObj.kyc?.status || 'pending';
+    const isKycVerified = userObj.isKycVerified || kycStatus === 'verified';
     userObj.id = user._id;
     userObj._id = user._id;
-    userObj.role = user.role || user.roles?.[0] || 'renter';
+    userObj.role = user.role || user.roles?.[0] || 'USER';
     userObj.kycStatus = kycStatus;
+    userObj.isKycVerified = isKycVerified;
+    userObj.fullName = userObj.fullName || userObj.name;
+    userObj.hostApplicationStatus = userObj.hostApplicationStatus || 'NONE';
+    userObj.hostApplicationDetails = userObj.hostApplicationDetails || {};
     userObj.kyc = {
       ...(userObj.kyc || {}),
       status: kycStatus

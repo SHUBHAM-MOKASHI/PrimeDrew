@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState } from 'react';
 import { Search, MapPin, Calendar, Car, Navigation } from 'lucide-react';
 import Button from '../common/Button';
@@ -34,12 +36,12 @@ export const HeroSearchBar = ({ onSearch, initialParams = {} }) => {
   };
 
   return (
-    <div className="w-full max-w-5xl mx-auto bg-white/95 backdrop-blur-xl rounded-2xl md:rounded-full border border-slate-200/90 shadow-xl shadow-slate-200/50 p-2 sm:p-3 transition-all">
-      <form onSubmit={handleSubmit} className="flex flex-col md:flex-row items-stretch md:items-center divide-y md:divide-y-0 md:divide-x divide-slate-100 gap-2 md:gap-0">
+    <div className="w-full max-w-5xl mx-auto bg-slate-950/90 backdrop-blur-2xl rounded-3xl md:rounded-full border border-slate-800/90 shadow-2xl shadow-black p-2 sm:p-2.5 transition-all text-slate-100">
+      <form onSubmit={handleSubmit} className="flex flex-col md:flex-row items-stretch md:items-center divide-y md:divide-y-0 md:divide-x divide-slate-800 gap-2 md:gap-0">
         
         {/* Location Field */}
         <div className="flex-1 px-4 py-2 flex items-center gap-3 relative group">
-          <div className="p-2 rounded-xl bg-indigo-50 text-indigo-600">
+          <div className="p-2.5 rounded-xl bg-cyan-950/60 text-cyan-400 border border-cyan-500/30">
             <MapPin className="w-4 h-4" />
           </div>
           <div className="flex-1 min-w-0">
@@ -49,13 +51,13 @@ export const HeroSearchBar = ({ onSearch, initialParams = {} }) => {
               value={location}
               onChange={(e) => setLocation(e.target.value)}
               placeholder="City, area, or landmark"
-              className="w-full text-xs sm:text-sm font-semibold text-slate-900 bg-transparent outline-none truncate placeholder:text-slate-400"
+              className="w-full text-xs sm:text-sm font-semibold text-white bg-transparent outline-none truncate placeholder:text-slate-500"
             />
           </div>
           <button
             type="button"
             onClick={handleAutoLocation}
-            className="text-slate-400 hover:text-indigo-600 transition-colors p-1"
+            className="text-slate-400 hover:text-cyan-400 transition-colors p-1 cursor-pointer"
             title="Detect My Location"
           >
             <Navigation className="w-3.5 h-3.5" />
@@ -64,7 +66,7 @@ export const HeroSearchBar = ({ onSearch, initialParams = {} }) => {
 
         {/* Pickup Date */}
         <div className="flex-1 px-4 py-2 flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-slate-100 text-slate-600">
+          <div className="p-2.5 rounded-xl bg-slate-900 text-slate-400 border border-slate-800">
             <Calendar className="w-4 h-4" />
           </div>
           <div className="flex-1 min-w-0">
@@ -73,14 +75,14 @@ export const HeroSearchBar = ({ onSearch, initialParams = {} }) => {
               type="datetime-local"
               value={pickupDate}
               onChange={(e) => setPickupDate(e.target.value)}
-              className="w-full text-xs font-semibold text-slate-800 bg-transparent outline-none cursor-pointer"
+              className="w-full text-xs font-semibold text-white bg-transparent outline-none cursor-pointer [color-scheme:dark]"
             />
           </div>
         </div>
 
         {/* Dropoff Date */}
         <div className="flex-1 px-4 py-2 flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-slate-100 text-slate-600">
+          <div className="p-2.5 rounded-xl bg-slate-900 text-slate-400 border border-slate-800">
             <Calendar className="w-4 h-4" />
           </div>
           <div className="flex-1 min-w-0">
@@ -89,14 +91,14 @@ export const HeroSearchBar = ({ onSearch, initialParams = {} }) => {
               type="datetime-local"
               value={dropoffDate}
               onChange={(e) => setDropoffDate(e.target.value)}
-              className="w-full text-xs font-semibold text-slate-800 bg-transparent outline-none cursor-pointer"
+              className="w-full text-xs font-semibold text-white bg-transparent outline-none cursor-pointer [color-scheme:dark]"
             />
           </div>
         </div>
 
         {/* Category Dropdown */}
         <div className="flex-1 px-4 py-2 flex items-center gap-3">
-          <div className="p-2 rounded-xl bg-slate-100 text-slate-600">
+          <div className="p-2.5 rounded-xl bg-slate-900 text-slate-400 border border-slate-800">
             <Car className="w-4 h-4" />
           </div>
           <div className="flex-1 min-w-0">
@@ -104,14 +106,14 @@ export const HeroSearchBar = ({ onSearch, initialParams = {} }) => {
             <select
               value={category}
               onChange={(e) => setCategory(e.target.value)}
-              className="w-full text-xs sm:text-sm font-semibold text-slate-800 bg-transparent outline-none cursor-pointer"
+              className="w-full text-xs sm:text-sm font-semibold text-white bg-transparent outline-none cursor-pointer [color-scheme:dark]"
             >
-              <option value="All">All Categories</option>
-              <option value="Sedan">Sedan</option>
-              <option value="SUV">SUV</option>
-              <option value="EV">Electric (EV)</option>
-              <option value="Bike">Superbike & Scooter</option>
-              <option value="Luxury">Luxury Class</option>
+              <option value="All" className="bg-slate-900 text-white">All Categories</option>
+              <option value="Sedan" className="bg-slate-900 text-white">Sedan</option>
+              <option value="SUV" className="bg-slate-900 text-white">SUV & Cruiser</option>
+              <option value="EV" className="bg-slate-900 text-white">Electric (EV)</option>
+              <option value="Bike" className="bg-slate-900 text-white">Superbike & Scooter</option>
+              <option value="Luxury" className="bg-slate-900 text-white">Luxury Class</option>
             </select>
           </div>
         </div>
@@ -122,9 +124,9 @@ export const HeroSearchBar = ({ onSearch, initialParams = {} }) => {
             type="submit"
             variant="primary"
             leftIcon={Search}
-            className="w-full md:w-auto py-3 px-6 rounded-xl md:rounded-full font-bold shadow-md shadow-indigo-200"
+            className="w-full md:w-auto py-3 px-6 rounded-2xl md:rounded-full font-bold"
           >
-            <span className="hidden lg:inline">Search Vehicles</span>
+            <span className="hidden lg:inline">Find Vehicles</span>
           </Button>
         </div>
 

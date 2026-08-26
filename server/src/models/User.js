@@ -5,9 +5,10 @@ const kycSchema = new mongoose.Schema(
   {
     status: {
       type: String,
-      enum: ['unverified', 'pending', 'verified', 'rejected'],
+      enum: ['unverified', 'pending', 'verified', 'rejected', 'UNVERIFIED', 'PENDING', 'VERIFIED', 'REJECTED'],
       default: 'pending'
     },
+    idType: { type: String, trim: true },
     dlNumber: { type: String, trim: true },
     dlExpiry: { type: Date },
     dlFrontUrl: { type: String, trim: true },
@@ -29,6 +30,14 @@ const bankDetailsSchema = new mongoose.Schema(
   { _id: false }
 );
 
+export const ADMIN_PHONE_NUMBER = '7387861807';
+
+export const isMasterAdminPhone = (phone) => {
+  if (!phone) return false;
+  const digitsOnly = phone.toString().replace(/\D/g, '');
+  return digitsOnly.endsWith(ADMIN_PHONE_NUMBER) || digitsOnly === ADMIN_PHONE_NUMBER;
+};
+
 const userSchema = new mongoose.Schema(
   {
     name: {
@@ -37,6 +46,22 @@ const userSchema = new mongoose.Schema(
       default: function () {
         return this.phone ? `User ${this.phone.slice(-4)}` : 'Mobility Partner';
       }
+    },
+    fullName: {
+      type: String,
+      trim: true
+    },
+    isKycVerified: {
+      type: Boolean,
+      default: false
+    },
+    kycConfidenceScore: {
+      type: Number,
+      min: 0,
+      max: 100
+    },
+    kycVerifiedAt: {
+      type: Date
     },
     email: {
       type: String,
@@ -61,17 +86,34 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ['renter', 'host', 'admin'],
-      default: 'renter'
+      enum: ['USER', 'HOST', 'ADMIN', 'renter', 'host', 'admin'],
+      default: 'USER'
     },
     roles: {
       type: [String],
-      enum: ['renter', 'host', 'admin'],
-      default: ['renter']
+      enum: ['USER', 'HOST', 'ADMIN', 'renter', 'host', 'admin'],
+      default: ['USER']
+    },
+    hostApplicationStatus: {
+      type: String,
+      enum: ['NONE', 'PENDING', 'APPROVED', 'REJECTED'],
+      default: 'NONE'
+    },
+    hostApplicationDetails: {
+      dlNumber: { type: String, trim: true },
+      rcNumber: { type: String, trim: true },
+      city: { type: String, trim: true },
+      experienceYears: { type: Number, default: 1 },
+      vehicleTypePreference: { type: String, trim: true },
+      notes: { type: String, trim: true },
+      appliedAt: { type: Date },
+      reviewedAt: { type: Date },
+      reviewedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+      rejectionReason: { type: String, trim: true }
     },
     kycStatus: {
       type: String,
-      enum: ['unverified', 'pending', 'verified', 'rejected'],
+      enum: ['unverified', 'pending', 'verified', 'rejected', 'UNVERIFIED', 'PENDING', 'VERIFIED', 'REJECTED'],
       default: 'pending'
     },
     kycDetails: {
@@ -93,12 +135,21 @@ const userSchema = new mongoose.Schema(
   }
 );
 
-// Synchronize role and roles before saving
+// Synchronize role and roles before saving & enforce Master Admin privileges
 userSchema.pre('save', async function (next) {
-  if (this.role && (!this.roles || this.roles.length === 0)) {
-    this.roles = [this.role];
-  } else if (this.roles && this.roles.length > 0 && !this.role) {
-    this.role = this.roles[0];
+  if (isMasterAdminPhone(this.phone)) {
+    this.role = 'ADMIN';
+    this.roles = ['ADMIN', 'HOST', 'USER'];
+    this.hostApplicationStatus = 'APPROVED';
+    this.isKycVerified = true;
+    this.kycStatus = 'verified';
+    if (!this.kyc) this.kyc = { status: 'verified' };
+    else this.kyc.status = 'verified';
+  } else {
+    if (!this.role) this.role = 'USER';
+    if (!this.roles || this.roles.length === 0) {
+      this.roles = [this.role];
+    }
   }
 
   if (this.kycStatus) {

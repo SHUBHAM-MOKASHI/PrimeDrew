@@ -1,4 +1,7 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import HeroSearchBar from '../components/discovery/HeroSearchBar';
 import FilterBar from '../components/discovery/FilterBar';
 import VehicleCard from '../components/discovery/VehicleCard';
@@ -6,21 +9,42 @@ import BookingCheckoutDrawer from '../components/booking/BookingCheckoutDrawer';
 import { getVehicles } from '../services/vehicleService';
 
 export const VehicleDiscovery = () => {
+  const [searchParams] = useSearchParams();
   const [vehicles, setVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedVehicle, setSelectedVehicle] = useState(null);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
 
   const [filters, setFilters] = useState({
-    category: '',
+    category: searchParams.get('category') || '',
     transmission: 'All',
     fuelType: 'All',
     seats: 'Any',
-    evOnly: false,
+    evOnly: searchParams.get('category') === 'EV',
     verifiedOnly: false,
     priceRange: 10000,
-    location: 'Mumbai, MH'
+    location: searchParams.get('location') || 'Mumbai, MH',
+    pickupDate: searchParams.get('pickupDate') || '',
+    dropoffDate: searchParams.get('dropoffDate') || ''
   });
+
+  useEffect(() => {
+    const urlCategory = searchParams.get('category');
+    const urlLocation = searchParams.get('location');
+    const urlPickup = searchParams.get('pickupDate');
+    const urlDropoff = searchParams.get('dropoffDate');
+
+    if (urlCategory !== null || urlLocation !== null || urlPickup !== null || urlDropoff !== null) {
+      setFilters(prev => ({
+        ...prev,
+        category: urlCategory ?? prev.category,
+        location: urlLocation ?? prev.location,
+        pickupDate: urlPickup ?? prev.pickupDate,
+        dropoffDate: urlDropoff ?? prev.dropoffDate,
+        evOnly: urlCategory === 'EV' ? true : prev.evOnly
+      }));
+    }
+  }, [searchParams]);
 
   const fetchFleet = async () => {
     setLoading(true);
@@ -147,7 +171,7 @@ export const VehicleDiscovery = () => {
   });
 
   return (
-    <div className="min-h-screen bg-slate-50 py-6 space-y-6">
+    <div className="min-h-screen bg-gradient-to-b from-[#030712] via-[#080d1a] to-[#020617] text-slate-100 py-6 space-y-6">
       
       {/* Sticky/Floating Hero Search Bar */}
       <div className="px-4 sm:px-6">
@@ -169,28 +193,28 @@ export const VehicleDiscovery = () => {
       {/* Catalog Grid Section */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-bold text-slate-900">
-            Available Fleet <span className="text-xs font-normal text-slate-500">({filteredList.length} Vehicles Found)</span>
+          <h2 className="text-xl font-bold text-white tracking-tight">
+            Available Fleet <span className="text-xs font-normal text-cyan-400 font-mono">({filteredList.length} Vehicles Found)</span>
           </h2>
         </div>
 
         {loading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="h-80 bg-white rounded-2xl border border-slate-100 animate-pulse p-4 flex flex-col justify-between">
-                <div className="h-40 bg-slate-100 rounded-xl" />
-                <div className="h-4 bg-slate-100 rounded w-3/4" />
-                <div className="h-4 bg-slate-100 rounded w-1/2" />
+              <div key={i} className="h-80 bg-slate-900/80 rounded-3xl border border-slate-800 shadow-xl animate-pulse p-4 flex flex-col justify-between">
+                <div className="h-44 bg-slate-950 rounded-2xl" />
+                <div className="h-4 bg-slate-800 rounded w-3/4" />
+                <div className="h-4 bg-slate-800 rounded w-1/2" />
               </div>
             ))}
           </div>
         ) : filteredList.length === 0 ? (
-          <div className="bg-white rounded-3xl p-12 text-center border border-slate-100 space-y-3">
-            <h3 className="text-lg font-bold text-slate-900">No vehicles match your active filters</h3>
-            <p className="text-xs text-slate-500">Try adjusting your price range, transmission, or location query.</p>
+          <div className="bg-slate-900/80 rounded-3xl p-12 text-center border border-slate-800 shadow-2xl shadow-black space-y-3">
+            <h3 className="text-lg font-bold text-white">No vehicles match your active filters</h3>
+            <p className="text-xs text-slate-400">Try adjusting your category, transmission, or fuel query.</p>
             <button
               onClick={handleResetFilters}
-              className="text-xs font-bold text-indigo-600 hover:underline"
+              className="text-xs font-bold text-cyan-400 hover:text-cyan-300 hover:underline cursor-pointer"
             >
               Reset Filters
             </button>

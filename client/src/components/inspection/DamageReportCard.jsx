@@ -23,46 +23,46 @@ export const DamageReportCard = ({
     switch (severity) {
       case 'High':
         return (
-          <span className="bg-rose-50 text-rose-700 border border-rose-200 text-xs font-semibold px-3 py-1 rounded-full inline-flex items-center gap-1.5 shadow-xs">
-            <AlertOctagon className="w-3.5 h-3.5 text-rose-600" /> High Damage Risk
+          <span className="bg-rose-950/80 text-rose-400 border border-rose-500/40 text-xs font-semibold px-3 py-1 rounded-full inline-flex items-center gap-1.5 shadow-[0_0_15px_rgba(244,63,94,0.25)]">
+            <AlertOctagon className="w-3.5 h-3.5 text-rose-400" /> High Damage Risk
           </span>
         );
       case 'Moderate':
         return (
-          <span className="bg-amber-50 text-amber-700 border border-amber-200 text-xs font-semibold px-3 py-1 rounded-full inline-flex items-center gap-1.5 shadow-xs">
-            <AlertTriangle className="w-3.5 h-3.5 text-amber-600" /> Moderate Damage Detected
+          <span className="bg-amber-950/80 text-amber-400 border border-amber-500/40 text-xs font-semibold px-3 py-1 rounded-full inline-flex items-center gap-1.5 shadow-[0_0_15px_rgba(245,158,11,0.25)]">
+            <AlertTriangle className="w-3.5 h-3.5 text-amber-400" /> Moderate Damage Detected
           </span>
         );
       default:
         return (
-          <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-semibold px-3 py-1 rounded-full inline-flex items-center gap-1.5 shadow-xs">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" /> Pre-Trip Verified Clean
+          <span className="bg-emerald-950/80 text-emerald-400 border border-emerald-500/30 text-xs font-semibold px-3 py-1 rounded-full inline-flex items-center gap-1.5 shadow-[0_0_15px_rgba(16,185,129,0.25)]">
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> Pre-Trip Verified Clean
           </span>
         );
     }
   };
 
   return (
-    <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-sm space-y-6">
+    <div className="bg-zinc-900/60 backdrop-blur-xl rounded-3xl border border-zinc-800/80 p-6 shadow-2xl space-y-6">
       
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-zinc-800">
         <div>
-          <h3 className="text-lg font-bold text-slate-900">
+          <h3 className="text-lg font-bold text-zinc-100">
             {stage === 'pickup' ? 'Pre-Trip Pickup Inspection Report' : 'Post-Trip Return Inspection Report'}
           </h3>
-          <p className="text-xs text-slate-500 mt-0.5">YOLOv8 Object Detection Bounding Box Summary</p>
+          <p className="text-xs text-zinc-400 mt-0.5">YOLOv8 Object Detection Bounding Box Summary</p>
         </div>
         {getSeverityBadge()}
       </div>
 
       {/* Dispute Warning Banner if Post-Trip reveals new damages */}
       {hasNewDisputeDamage && stage === 'dropoff' && (
-        <div className="bg-rose-50 border border-rose-200 rounded-2xl p-4 text-xs text-rose-900 flex items-start gap-3 animate-in fade-in">
-          <AlertOctagon className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+        <div className="bg-rose-950/40 border border-rose-500/40 rounded-2xl p-4 text-xs text-rose-200 flex items-start gap-3 animate-in fade-in">
+          <AlertOctagon className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
           <div>
-            <span className="font-bold text-sm text-rose-950 block">New Unrecorded Damage Detected!</span>
-            <p className="text-rose-700 mt-0.5 leading-snug">
+            <span className="font-bold text-sm text-rose-100 block">New Unrecorded Damage Detected!</span>
+            <p className="text-rose-300 mt-0.5 leading-snug">
               Post-trip AI scan detected new structural or surface damages not present in the pre-trip baseline inspection. Security deposit hold (₹2,000 - ₹5,000) may be flagged for host review.
             </p>
           </div>
@@ -71,16 +71,16 @@ export const DamageReportCard = ({
 
       {/* Detections Itemized Log Table */}
       {detections.length === 0 ? (
-        <div className="bg-slate-50 rounded-2xl p-8 text-center text-slate-500 text-xs space-y-1">
-          <ShieldCheck className="w-8 h-8 text-emerald-600 mx-auto mb-2" />
-          <span className="font-bold text-slate-800 text-sm block">No Bounding Box Damages Detected</span>
+        <div className="bg-zinc-950/60 rounded-2xl p-8 text-center text-zinc-400 text-xs space-y-1 border border-zinc-800">
+          <ShieldCheck className="w-8 h-8 text-emerald-400 mx-auto mb-2" />
+          <span className="font-bold text-zinc-100 text-sm block">No Bounding Box Damages Detected</span>
           <p>Vehicle exterior matches clean platform quality guidelines.</p>
         </div>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-slate-50 border-b border-slate-100 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+              <tr className="bg-zinc-950/80 border-b border-zinc-800 text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
                 <th className="p-3">#</th>
                 <th className="p-3">Damage Classification</th>
                 <th className="p-3">AI Confidence</th>
@@ -88,7 +88,7 @@ export const DamageReportCard = ({
                 <th className="p-3 text-right">Acknowledgement</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 text-xs">
+            <tbody className="divide-y divide-zinc-800 text-xs">
               {detections.map((det, idx) => {
                 const isSelected = selectedDetectionIndex === idx;
                 const isAck = !!acknowledgedItems[idx];
@@ -98,23 +98,23 @@ export const DamageReportCard = ({
                     key={idx}
                     onClick={() => onSelectDetection && onSelectDetection(idx)}
                     className={`cursor-pointer transition-colors ${
-                      isSelected ? 'bg-indigo-50/60 font-semibold' : 'hover:bg-slate-50/50'
+                      isSelected ? 'bg-indigo-500/20 font-semibold border-l-2 border-indigo-400' : 'hover:bg-zinc-800/40'
                     }`}
                   >
-                    <td className="p-3 font-bold text-slate-400">{idx + 1}</td>
+                    <td className="p-3 font-bold text-zinc-500 font-mono">{idx + 1}</td>
                     <td className="p-3">
-                      <span className="font-bold text-slate-900 block">{det.damageType}</span>
-                      <span className="text-[11px] text-slate-400">{det.location || 'Exterior Surface'}</span>
+                      <span className="font-bold text-zinc-100 block">{det.damageType}</span>
+                      <span className="text-[11px] text-zinc-400">{det.location || 'Exterior Surface'}</span>
                     </td>
-                    <td className="p-3 font-bold text-indigo-600">
+                    <td className="p-3 font-bold text-indigo-400 font-mono">
                       {Math.round((det.confidence || 0.9) * 100)}%
                     </td>
                     <td className="p-3">
                       <span
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                        className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
                           det.damageType?.toLowerCase().includes('dent')
-                            ? 'bg-rose-50 text-rose-700 border border-rose-200'
-                            : 'bg-amber-50 text-amber-700 border border-amber-200'
+                            ? 'bg-rose-950/80 text-rose-300 border border-rose-500/30'
+                            : 'bg-amber-950/80 text-amber-300 border border-amber-500/30'
                         }`}
                       >
                         {det.damageType?.toLowerCase().includes('dent') ? 'Moderate' : 'Low'}
@@ -127,12 +127,12 @@ export const DamageReportCard = ({
                           e.stopPropagation();
                           toggleAcknowledge(idx);
                         }}
-                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-700 hover:text-indigo-600"
+                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-300 hover:text-indigo-400 cursor-pointer"
                       >
                         {isAck ? (
-                          <CheckSquare className="w-4 h-4 text-emerald-600" />
+                          <CheckSquare className="w-4 h-4 text-emerald-400" />
                         ) : (
-                          <Square className="w-4 h-4 text-slate-400" />
+                          <Square className="w-4 h-4 text-zinc-600" />
                         )}
                         <span>{isAck ? 'Acknowledged' : 'Verify'}</span>
                       </button>
@@ -145,11 +145,11 @@ export const DamageReportCard = ({
         </div>
       )}
 
-      <div className="bg-slate-50 rounded-2xl p-4 text-xs text-slate-600 flex items-center justify-between">
+      <div className="bg-zinc-950/60 border border-zinc-800 rounded-2xl p-4 text-xs text-zinc-400 flex items-center justify-between">
         <span className="flex items-center gap-1.5">
-          <Info className="w-4 h-4 text-slate-400" /> AI Confidence Threshold: &gt;= 85% Precision
+          <Info className="w-4 h-4 text-indigo-400" /> AI Confidence Threshold: &gt;= 85% Precision
         </span>
-        <span className="font-bold text-slate-800">
+        <span className="font-bold text-zinc-200 font-mono">
           {Object.keys(acknowledgedItems).length} of {detections.length} Items Signed
         </span>
       </div>
@@ -159,3 +159,4 @@ export const DamageReportCard = ({
 };
 
 export default DamageReportCard;
+

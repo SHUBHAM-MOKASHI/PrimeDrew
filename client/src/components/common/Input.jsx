@@ -1,3 +1,5 @@
+'use client';
+
 import React from 'react';
 import { cn } from '../../utils/cn';
 
@@ -8,7 +10,7 @@ export const Input = React.forwardRef(
     return (
       <div className={cn('w-full flex flex-col gap-1.5', containerClassName)}>
         {label && (
-          <label htmlFor={inputId} className="text-xs font-semibold uppercase tracking-wider text-slate-600">
+          <label htmlFor={inputId} className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
             {label}
           </label>
         )}
@@ -22,11 +24,11 @@ export const Input = React.forwardRef(
             id={inputId}
             ref={ref}
             className={cn(
-              'w-full bg-white text-slate-900 text-sm rounded-xl border border-slate-200 px-4 py-2.5 outline-none transition-all duration-200 placeholder:text-slate-400',
-              'focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/10',
+              'w-full bg-slate-950/70 text-slate-100 text-sm rounded-xl border border-slate-800 px-4 py-2.5 outline-none transition-all duration-200 placeholder:text-slate-500 shadow-sm',
+              'focus:bg-slate-900 focus:border-cyan-500 focus:ring-4 focus:ring-cyan-500/15',
               LeftIcon && 'pl-10',
               RightIcon && 'pr-10',
-              error && 'border-rose-300 focus:border-rose-500 focus:ring-rose-500/10',
+              error && 'border-rose-500/80 focus:border-rose-500 focus:ring-rose-500/20',
               className
             )}
             {...props}
@@ -38,9 +40,9 @@ export const Input = React.forwardRef(
           )}
         </div>
         {error ? (
-          <span className="text-xs font-medium text-rose-600">{error}</span>
+          <span className="text-xs font-medium text-rose-400">{error}</span>
         ) : helperText ? (
-          <span className="text-xs text-slate-400">{helperText}</span>
+          <span className="text-xs text-slate-500">{helperText}</span>
         ) : null}
       </div>
     );

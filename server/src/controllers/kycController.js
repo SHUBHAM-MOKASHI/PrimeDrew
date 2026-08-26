@@ -48,10 +48,13 @@ export const processIDExtraction = async (req, res, next) => {
     const { dlNumber, expiryDate, name, documentType, rawText } = aiResponse.data;
 
     // Update current user's KYC draft fields in DB
-    const user = await User.findById(req.user._id);
+    const user = await User.findById(req.user._id || req.user.id);
     if (user) {
       if (dlNumber) user.kyc.dlNumber = dlNumber;
       if (expiryDate) user.kyc.dlExpiry = new Date(expiryDate);
+      if (name && typeof name === 'string' && name.trim() !== '') {
+        user.name = name.trim();
+      }
       if (user.kyc.status === 'unverified') {
         user.kyc.status = 'pending';
       }
@@ -68,7 +71,8 @@ export const processIDExtraction = async (req, res, next) => {
         expiryDate,
         rawText
       },
-      kycStatus: user ? user.kyc.status : 'pending'
+      kycStatus: user ? user.kyc.status : 'pending',
+      user
     });
   } catch (error) {
     next(error);
@@ -124,45 +128,101 @@ export const processFaceVerification = async (req, res, next) => {
     }
 
     const { match_score = 0, is_match = false, verified = false, error = '' } = aiResponse.data;
+    const matchPercentage = match_score;
+    const isVerified = verified || is_match || matchPercentage >= 50;
 
-    const user = await User.findById(req.user._id);
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User profile not found.'
-      });
+    const { fullName, name, dlNumber, idNumber, idType, extractedData } = req.body || {};
+    let parsedExtracted = {};
+    try {
+      parsedExtracted = typeof extractedData === 'string' ? JSON.parse(extractedData || '{}') : (extractedData || {});
+    } catch {
+      parsedExtracted = {};
     }
 
-    const isVerified = verified || is_match || match_score >= 50;
-
-    user.kycStatus = isVerified ? 'verified' : 'rejected';
-    user.kyc = {
-      ...(user.kyc || {}),
-      status: user.kycStatus,
-      faceMatchScore: match_score,
-      rejectionReason: isVerified ? undefined : (error || 'Biometric match score below threshold.')
-    };
+    const verifiedName = (req.body.fullName || req.body.name || fullName || name || parsedExtracted?.name || parsedExtracted?.full_name || '').trim();
+    const verifiedDocNumber = (idNumber || dlNumber || parsedExtracted?.docNumber || parsedExtracted?.document_number || '').trim();
+    const verifiedIdType = (idType || parsedExtracted?.idType || 'Driving License').trim();
 
     if (isVerified) {
-      user.kycDetails = {
-        extractedData: {},
-        verifiedAt: new Date(),
-        similarityScore: match_score
+      const updateData = {
+        isKycVerified: true,
+        kycStatus: 'verified',
+        'kyc.status': 'verified',
+        'kyc.faceMatchScore': matchPercentage || 100,
+        kycConfidenceScore: matchPercentage || 100,
+        kycVerifiedAt: new Date(),
+        kycDetails: {
+          extractedData: {
+            ...parsedExtracted,
+            name: verifiedName,
+            docNumber: verifiedDocNumber,
+            idNumber: verifiedDocNumber,
+            idType: verifiedIdType
+          },
+          verifiedAt: new Date(),
+          similarityScore: matchPercentage || 100
+        }
       };
+
+      if (verifiedDocNumber) {
+        updateData['kyc.dlNumber'] = verifiedDocNumber;
+      }
+      if (verifiedIdType) {
+        updateData['kyc.idType'] = verifiedIdType;
+      }
+
+      // Explicitly overwrite the user's primary name fields in MongoDB
+      if (verifiedName) {
+        updateData.name = verifiedName;
+        updateData.fullName = verifiedName;
+      }
+
+      const updatedUser = await User.findByIdAndUpdate(
+        req.user._id || req.user.id,
+        { $set: updateData },
+        { new: true }
+      ).select('-password');
+
+      return res.status(200).json({
+        success: true,
+        message: 'KYC Verified successfully',
+        verified: true,
+        matchScore: matchPercentage,
+        match_score: matchPercentage,
+        kycStatus: updatedUser.kycStatus,
+        user: updatedUser
+      });
+    } else {
+      const rejectUpdate = {
+        isKycVerified: false,
+        kycStatus: 'rejected',
+        'kyc.status': 'rejected',
+        'kyc.faceMatchScore': matchPercentage,
+        'kyc.rejectionReason': error || 'Face match score below required threshold (50%)',
+        kycConfidenceScore: matchPercentage,
+        kycDetails: {
+          extractedData: parsedExtracted,
+          verifiedAt: new Date(),
+          similarityScore: matchPercentage
+        }
+      };
+
+      const updatedUser = await User.findByIdAndUpdate(
+        req.user._id || req.user.id,
+        { $set: rejectUpdate },
+        { new: true }
+      ).select('-password');
+
+      return res.status(400).json({
+        success: false,
+        message: error || 'Face match score below required threshold (50%)',
+        verified: false,
+        matchScore: matchPercentage,
+        match_score: matchPercentage,
+        kycStatus: updatedUser?.kycStatus || 'rejected',
+        user: updatedUser
+      });
     }
-
-    await user.save();
-
-    res.status(200).json({
-      success: true,
-      message: isVerified 
-        ? 'Biometric verification passed! KYC status set to verified.' 
-        : 'Biometric verification failed.',
-      verified: isVerified,
-      kycStatus: user.kycStatus,
-      match_score,
-      error: isVerified ? null : error
-    });
   } catch (error) {
     next(error);
   }
@@ -175,40 +235,82 @@ export const processFaceVerification = async (req, res, next) => {
  */
 export const updateKYCStatus = async (req, res, next) => {
   try {
-    const { status = 'verified', similarityScore, faceMatchScore, extractedData, dlNumber } = req.body;
-    const score = similarityScore ?? faceMatchScore ?? 94;
+    const {
+      status = 'verified',
+      kycStatus,
+      similarityScore,
+      faceMatchScore,
+      name,
+      fullName,
+      extractedData,
+      dlNumber,
+      idNumber,
+      idType
+    } = req.body;
 
-    const user = await User.findById(req.user._id);
-    if (!user) {
+    const finalStatus = (kycStatus || status || 'verified').toLowerCase();
+    const score = similarityScore ?? faceMatchScore ?? 94;
+    let parsedExtracted = {};
+    try {
+      parsedExtracted = typeof extractedData === 'string' ? JSON.parse(extractedData || '{}') : (extractedData || {});
+    } catch {
+      parsedExtracted = {};
+    }
+
+    const verifiedName = (req.body.fullName || req.body.name || fullName || name || parsedExtracted?.name || parsedExtracted?.full_name || '').trim();
+    const docNum = (idNumber || dlNumber || parsedExtracted?.docNumber || parsedExtracted?.document_number || '').trim();
+    const type = (idType || parsedExtracted?.idType || 'Driving License').trim();
+
+    const updateFields = {
+      isKycVerified: finalStatus === 'verified',
+      kycStatus: finalStatus,
+      'kyc.status': finalStatus,
+      'kyc.faceMatchScore': score,
+      kycConfidenceScore: score,
+      kycVerifiedAt: new Date(),
+      'kyc.rejectionReason': finalStatus === 'verified' ? undefined : 'Verification rejected',
+      kycDetails: {
+        extractedData: {
+          ...parsedExtracted,
+          name: verifiedName,
+          docNumber: docNum,
+          idNumber: docNum,
+          idType: type
+        },
+        verifiedAt: new Date(),
+        similarityScore: score
+      }
+    };
+
+    if (verifiedName) {
+      updateFields.name = verifiedName;
+      updateFields.fullName = verifiedName;
+    }
+
+    if (docNum) {
+      updateFields['kyc.dlNumber'] = docNum;
+    }
+    if (type) {
+      updateFields['kyc.idType'] = type;
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      req.user.id || req.user._id,
+      { $set: updateFields },
+      { new: true }
+    ).select('-password');
+
+    if (!updatedUser) {
       return res.status(404).json({
         success: false,
         message: 'User profile not found.'
       });
     }
 
-    user.kycStatus = status;
-    user.kycDetails = {
-      extractedData: extractedData || {},
-      verifiedAt: new Date(),
-      similarityScore: score
-    };
-    user.kyc = {
-      ...(user.kyc || {}),
-      status: status,
-      dlNumber: dlNumber || extractedData?.docNumber || user.kyc?.dlNumber,
-      faceMatchScore: score,
-      rejectionReason: status === 'verified' ? undefined : user.kyc?.rejectionReason
-    };
-
-    await user.save();
-
-    const userObj = user.toObject ? user.toObject() : { ...user };
-    delete userObj.password;
-
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
-      message: `KYC status successfully updated to ${status}.`,
-      user: userObj
+      message: `KYC status successfully updated to ${finalStatus}.`,
+      user: updatedUser
     });
   } catch (error) {
     next(error);

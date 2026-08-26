@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState } from 'react';
 import { Sparkles, ArrowRightLeft, ShieldCheck, CheckCircle2, Lock, FileCheck } from 'lucide-react';
 import Button from '../components/common/Button';
@@ -127,33 +129,33 @@ export const InspectionPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 py-8">
+    <div className="min-h-screen bg-gradient-to-b from-[#030712] via-[#080d1a] to-[#020617] text-slate-100 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
         
         {/* Top Header & Stage Switcher */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <span className="inline-flex items-center gap-1.5 bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-semibold px-3 py-1 rounded-full mb-2">
-              <Sparkles className="w-3.5 h-3.5" /> AI YOLOv8 Damage Telemetry
+            <span className="inline-flex items-center gap-1.5 bg-cyan-950/70 text-cyan-400 border border-cyan-500/30 text-xs font-semibold px-3.5 py-1.5 rounded-full mb-3 shadow-sm backdrop-blur-md">
+              <Sparkles className="w-3.5 h-3.5 text-cyan-400 animate-pulse" /> AI YOLOv8 Damage Telemetry
             </span>
-            <h1 className="text-3xl font-extrabold text-slate-900">Vehicle Inspection Command</h1>
-            <p className="text-xs sm:text-sm text-slate-500 mt-1">
+            <h1 className="text-3xl font-extrabold text-white">Vehicle Inspection Studio</h1>
+            <p className="text-xs sm:text-sm text-slate-400 mt-1">
               Automated bounding box detection for pre-trip handover & post-trip deposit settlement
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-3">
             {/* Stage Selector Pills */}
-            <div className="bg-slate-200/70 p-1 rounded-2xl flex gap-1 border border-slate-300/60">
+            <div className="bg-slate-900/80 p-1 rounded-2xl flex gap-1 border border-slate-800 shadow-sm backdrop-blur-md">
               <button
                 onClick={() => {
                   setStage('pickup');
                   setIsSplitView(false);
                 }}
-                className={`text-xs font-bold px-4 py-2 rounded-xl transition-all ${
+                className={`text-xs font-bold px-4 py-2 rounded-xl transition-all cursor-pointer ${
                   stage === 'pickup' && !isSplitView
-                    ? 'bg-white text-indigo-600 shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900'
+                    ? 'bg-slate-800 text-cyan-400 shadow-sm border border-slate-700 font-bold'
+                    : 'text-slate-400 hover:text-white'
                 }`}
               >
                 Pre-Trip (Pickup)
@@ -163,10 +165,10 @@ export const InspectionPage = () => {
                   setStage('dropoff');
                   setIsSplitView(false);
                 }}
-                className={`text-xs font-bold px-4 py-2 rounded-xl transition-all ${
+                className={`text-xs font-bold px-4 py-2 rounded-xl transition-all cursor-pointer ${
                   stage === 'dropoff' && !isSplitView
-                    ? 'bg-white text-indigo-600 shadow-sm'
-                    : 'text-slate-600 hover:text-slate-900'
+                    ? 'bg-slate-800 text-cyan-400 shadow-sm border border-slate-700 font-bold'
+                    : 'text-slate-400 hover:text-white'
                 }`}
               >
                 Post-Trip (Dropoff)
@@ -179,7 +181,7 @@ export const InspectionPage = () => {
               size="sm"
               leftIcon={ArrowRightLeft}
               onClick={() => setIsSplitView(!isSplitView)}
-              className="hidden md:inline-flex"
+              className="hidden md:inline-flex border-slate-800 hover:border-slate-700"
             >
               {isSplitView ? 'Single View' : 'Split View Comparison'}
             </Button>
@@ -194,11 +196,11 @@ export const InspectionPage = () => {
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 animate-in fade-in">
             {/* Pre-Trip Baseline Canvas */}
             <div className="space-y-3">
-              <div className="flex justify-between items-center bg-white p-3 rounded-xl border border-slate-200">
-                <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                  <ShieldCheck className="w-4 h-4 text-emerald-600" /> Pre-Trip Baseline
+              <div className="flex justify-between items-center bg-slate-900/80 p-3.5 rounded-2xl border border-slate-800 shadow-sm backdrop-blur-xl">
+                <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <ShieldCheck className="w-4 h-4 text-emerald-400" /> Pre-Trip Baseline
                 </span>
-                <span className="text-[11px] font-semibold text-slate-500">
+                <span className="text-[11px] font-semibold text-slate-400 font-mono">
                   {preTripDetections.length} Bounding Box Detections
                 </span>
               </div>
@@ -212,11 +214,11 @@ export const InspectionPage = () => {
 
             {/* Post-Trip Return Canvas */}
             <div className="space-y-3">
-              <div className="flex justify-between items-center bg-white p-3 rounded-xl border border-slate-200">
-                <span className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
-                  <FileCheck className="w-4 h-4 text-indigo-600" /> Post-Trip Return Scan
+              <div className="flex justify-between items-center bg-slate-900/80 p-3.5 rounded-2xl border border-slate-800 shadow-sm backdrop-blur-xl">
+                <span className="text-xs font-bold text-white flex items-center gap-1.5">
+                  <FileCheck className="w-4 h-4 text-cyan-400" /> Post-Trip Return Scan
                 </span>
-                <span className="text-[11px] font-semibold text-rose-600">
+                <span className="text-[11px] font-semibold text-rose-400 font-mono">
                   {postTripDetections.length} Total Detections ({postTripDetections.length - preTripDetections.length} New)
                 </span>
               </div>
@@ -232,9 +234,9 @@ export const InspectionPage = () => {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             {/* Main Interactive Canvas Overlay */}
             <div className="lg:col-span-2 space-y-3">
-              <div className="flex items-center justify-between bg-white px-4 py-2.5 rounded-xl border border-slate-200">
-                <span className="text-xs font-bold text-slate-900 flex items-center gap-2">
-                  <Sparkles className="w-4 h-4 text-indigo-600" /> Active Bounding Box Canvas Overlay
+              <div className="flex items-center justify-between bg-slate-900/80 px-4 py-2.5 rounded-2xl border border-slate-800 shadow-sm backdrop-blur-xl">
+                <span className="text-xs font-bold text-white flex items-center gap-2">
+                  <Sparkles className="w-4 h-4 text-cyan-400" /> Active Bounding Box Canvas Overlay
                 </span>
                 <span className="text-xs text-slate-400 font-semibold">Click box or table row to highlight</span>
               </div>
@@ -261,12 +263,12 @@ export const InspectionPage = () => {
         )}
 
         {/* Finalization CTA Bar */}
-        <div className="bg-white rounded-3xl border border-slate-200 p-6 shadow-md flex flex-col sm:flex-row items-center justify-between gap-4">
+        <div className="bg-slate-900/90 rounded-3xl border border-slate-800 p-6 shadow-2xl backdrop-blur-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
           <div>
-            <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
-              <Lock className="w-4 h-4 text-indigo-600" /> Finalize Telemetry Contract
+            <h3 className="text-base font-bold text-white flex items-center gap-2">
+              <Lock className="w-4 h-4 text-cyan-400" /> Finalize Telemetry Contract
             </h3>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs text-slate-400 mt-0.5 max-w-xl">
               Signing this inspection logs coordinates into the booking contract and triggers automated security deposit release.
             </p>
           </div>
@@ -276,7 +278,7 @@ export const InspectionPage = () => {
             size="lg"
             leftIcon={CheckCircle2}
             onClick={handleFinalizeInspection}
-            className="w-full sm:w-auto px-8 py-3.5 font-bold shadow-lg shadow-indigo-100"
+            className="w-full sm:w-auto px-8 py-3.5 font-bold shadow-lg shadow-blue-600/30"
           >
             {isFinalized ? 'Telemetry Contract Signed' : 'Sign & Finalize Inspection'}
           </Button>

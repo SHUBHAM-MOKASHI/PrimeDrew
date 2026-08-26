@@ -10,6 +10,7 @@ import bookingRoutes from './routes/bookingRoutes.js';
 import inspectionRoutes from './routes/inspectionRoutes.js';
 import kycRoutes from './routes/kycRoutes.js';
 import userRoutes from './routes/userRoutes.js';
+import adminRoutes from './routes/adminRoutes.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 
 const app = express();
@@ -73,6 +74,7 @@ app.use('/api/v1/bookings', bookingRoutes);
 app.use('/api/v1/inspections', inspectionRoutes);
 app.use('/api/v1/kyc', kycRoutes);
 app.use('/api/v1/users', userRoutes);
+app.use('/api/v1/admin', adminRoutes);
 
 // 404 Handler
 app.use('*', (req, res) => {
