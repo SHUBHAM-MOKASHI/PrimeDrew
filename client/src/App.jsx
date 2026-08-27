@@ -8,7 +8,9 @@ import Home from './pages/Home';
 import VehicleDiscovery from './pages/VehicleDiscovery';
 import VehicleDetailsPage from './pages/VehicleDetailsPage';
 import HostDashboardPage from './pages/HostDashboardPage';
+import ListVehicle from './pages/host/ListVehicle';
 import InspectionPage from './pages/InspectionPage';
+import VehicleInspectionStudio from './components/studio/VehicleInspectionStudio';
 import AdminDashboard from './pages/AdminDashboard';
 import HostApplicationModal from './components/host/HostApplicationModal';
 
@@ -33,9 +35,19 @@ export function AppContent() {
           <Route path="/vehicles" element={<VehicleDiscovery />} />
           <Route path="/vehicles/:id" element={<VehicleDetailsPage />} />
           <Route path="/vehicle/:id" element={<VehicleDetailsPage />} />
-          <Route path="/inspections" element={<InspectionPage />} />
-          <Route path="/inspection/:bookingId" element={<InspectionPage />} />
+          
+          {/* AI Inspection Studio Routes */}
+          <Route path="/inspections" element={<VehicleInspectionStudio />} />
+          <Route path="/inspection/:bookingId" element={<VehicleInspectionStudio />} />
+          <Route path="/inspection" element={<VehicleInspectionStudio />} />
+          <Route path="/inspection-studio" element={<VehicleInspectionStudio />} />
+          <Route path="/ai-studio" element={<VehicleInspectionStudio />} />
+          <Route path="/studio" element={<VehicleInspectionStudio />} />
+          <Route path="/damage-studio" element={<VehicleInspectionStudio />} />
+          
           <Route path="/host" element={<HostDashboardPage />} />
+          <Route path="/host/list-vehicle" element={<ListVehicle />} />
+          <Route path="/host/list" element={<ListVehicle />} />
           <Route path="/admin" element={<AdminDashboard />} />
         </Routes>
       </main>

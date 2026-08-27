@@ -116,7 +116,7 @@ export const HostApplicationModal = ({ isOpen, onClose }) => {
             <h3 className="text-lg font-bold text-white">Host Application Submitted!</h3>
           </div>
           <p className="text-xs text-slate-300 leading-relaxed max-w-md mx-auto bg-slate-900/80 p-4 rounded-2xl border border-slate-800">
-            Thank you, <strong className="text-cyan-400">{user?.fullName || user?.name}</strong>. Your host onboarding credentials have been queued for Master Admin (Phone: <strong className="text-white">7387861807</strong>) verification. Once approved, the Host Dashboard and Vehicle Listing wizard will unlock automatically.
+            Thank you, <strong className="text-cyan-400">{user?.fullName || user?.name || 'User'}</strong>. Your host onboarding request has been submitted to the PrimeDrew Verification Team for review. Once approved, the Host Dashboard and Vehicle Listing wizard will unlock automatically.
           </p>
           <Button variant="primary" onClick={onClose} className="w-full py-3 font-bold mt-3 shadow-lg shadow-cyan-950/40">
             Got It, Thanks
@@ -149,7 +149,7 @@ export const HostApplicationModal = ({ isOpen, onClose }) => {
                 <span className="text-[10px] text-slate-400 block">
                   {isKycVerified
                     ? `Verified for ${user?.fullName || user?.name} (DeepFace 1:1)`
-                    : 'Complete 60s biometric KYC for 3x faster Admin approval'}
+                    : 'Complete 60s biometric KYC for 3x faster verification clearance'}
                 </span>
               </div>
             </div>
@@ -217,7 +217,7 @@ export const HostApplicationModal = ({ isOpen, onClose }) => {
 
             <div className="w-full flex flex-col gap-1.5">
               <label className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                Host Experience / Notes for Admin (Optional)
+                Host Experience / Notes (Optional)
               </label>
               <textarea
                 rows={2}
@@ -240,7 +240,7 @@ export const HostApplicationModal = ({ isOpen, onClose }) => {
               Submit Host Application
             </Button>
             <p className="text-[10px] text-center text-slate-500 mt-2">
-              Applications are reviewed exclusively by Master Admin (7387861807).
+              Applications are reviewed securely by the PrimeDrew Verification Team.
             </p>
           </div>
         </form>

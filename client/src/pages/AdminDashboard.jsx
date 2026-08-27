@@ -28,20 +28,23 @@ import {
 import { useAuth } from '../context/AuthContext';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
+import Modal from '../components/common/Modal';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
 
 export const AdminDashboard = () => {
   const { user, token, isAdmin, isMasterAdmin, openAuthModal } = useAuth();
 
-  const [activeTab, setActiveTab] = useState('applications'); // 'applications' | 'users' | 'fleet' | 'security'
+  const [activeTab, setActiveTab] = useState('vehicles'); // 'vehicles' | 'applications' | 'users' | 'fleet' | 'security'
   const [appStatusFilter, setAppStatusFilter] = useState('PENDING'); // 'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'
+  const [vehicleFilter, setVehicleFilter] = useState('PENDING'); // 'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'
 
   const [stats, setStats] = useState({
     totalUsers: 0,
     totalHosts: 0,
     totalAdmins: 1,
     pendingApplications: 0,
+    pendingVehicles: 0,
     approvedHosts: 0,
     verifiedKycUsers: 0,
     totalVehicles: 0,
@@ -57,7 +60,11 @@ export const AdminDashboard = () => {
   const [actionLoadingId, setActionLoadingId] = useState(null);
   const [rejectModalUserId, setRejectModalUserId] = useState(null);
   const [rejectionReasonInput, setRejectionReasonInput] = useState('');
+  const [rejectVehicleModalId, setRejectVehicleModalId] = useState(null);
+  const [rejectVehicleReasonInput, setRejectVehicleReasonInput] = useState('');
+  const [previewDocumentUrl, setPreviewDocumentUrl] = useState(null);
   const [userSearchQuery, setUserSearchQuery] = useState('');
+  const [vehicleSearchQuery, setVehicleSearchQuery] = useState('');
   const [userRoleFilter, setUserRoleFilter] = useState('all');
   const [toastMessage, setToastMessage] = useState('');
 
@@ -105,6 +112,65 @@ export const AdminDashboard = () => {
       fetchAdminData();
     }
   }, [isAdmin, token]);
+
+  const handleApproveVehicle = async (vehicleId) => {
+    setActionLoadingId(vehicleId);
+    const authToken = token || localStorage.getItem('token') || localStorage.getItem('primedrew_token');
+    try {
+      const res = await axios.patch(
+        `/api/v1/admin/vehicles/${vehicleId}/approve`,
+        {},
+        { headers: { Authorization: authToken ? `Bearer ${authToken}` : '' } }
+      );
+
+      if (res.data?.success) {
+        showToast(res.data.message || 'Vehicle approved and published to fleet.');
+        setFleetList((prev) =>
+          prev.map((v) =>
+            (v._id === vehicleId || v.id === vehicleId)
+              ? { ...v, verificationStatus: 'approved', status: 'available', rcDocument: { ...(v.rcDocument || {}), isVerifiedByAdmin: true } }
+              : v
+          )
+        );
+        fetchAdminData();
+      }
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Failed to approve vehicle.');
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
+
+  const handleRejectVehicle = async () => {
+    if (!rejectVehicleModalId) return;
+    setActionLoadingId(rejectVehicleModalId);
+    const authToken = token || localStorage.getItem('token') || localStorage.getItem('primedrew_token');
+    try {
+      const res = await axios.patch(
+        `/api/v1/admin/vehicles/${rejectVehicleModalId}/reject`,
+        { reason: rejectVehicleReasonInput || 'RC Document authenticity check failed.' },
+        { headers: { Authorization: authToken ? `Bearer ${authToken}` : '' } }
+      );
+
+      if (res.data?.success) {
+        showToast(res.data.message || 'Vehicle rejected.');
+        setFleetList((prev) =>
+          prev.map((v) =>
+            (v._id === rejectVehicleModalId || v.id === rejectVehicleModalId)
+              ? { ...v, verificationStatus: 'rejected', status: 'unlisted', rcDocument: { ...(v.rcDocument || {}), isVerifiedByAdmin: false, flagReason: rejectVehicleReasonInput } }
+              : v
+          )
+        );
+        setRejectVehicleModalId(null);
+        setRejectVehicleReasonInput('');
+        fetchAdminData();
+      }
+    } catch (err) {
+      showToast(err.response?.data?.message || 'Failed to reject vehicle.');
+    } finally {
+      setActionLoadingId(null);
+    }
+  };
 
   const handleApproveHost = async (targetUserId) => {
     setActionLoadingId(targetUserId);
@@ -257,6 +323,23 @@ export const AdminDashboard = () => {
     return (app.hostApplicationStatus || 'PENDING') === appStatusFilter;
   });
 
+  const filteredVehicles = fleetList.filter((v) => {
+    const vStatus = (v.verificationStatus || 'pending').toUpperCase();
+    const matchesStatus = vehicleFilter === 'ALL' || vStatus === vehicleFilter;
+    const matchesSearch =
+      !vehicleSearchQuery ||
+      (v.title || '').toLowerCase().includes(vehicleSearchQuery.toLowerCase()) ||
+      (v.make || '').toLowerCase().includes(vehicleSearchQuery.toLowerCase()) ||
+      (v.model || '').toLowerCase().includes(vehicleSearchQuery.toLowerCase()) ||
+      (v.registrationNumber || v.plateNumber || '').toLowerCase().includes(vehicleSearchQuery.toLowerCase()) ||
+      (v.host?.fullName || v.host?.name || '').toLowerCase().includes(vehicleSearchQuery.toLowerCase());
+    return matchesStatus && matchesSearch;
+  });
+
+  const pendingVehiclesCount = fleetList.filter(
+    (v) => (v.verificationStatus || 'pending').toUpperCase() === 'PENDING'
+  ).length;
+
   const filteredUsers = usersList.filter((u) => {
     const matchesRole = userRoleFilter === 'all' || (u.role || '').toUpperCase() === userRoleFilter.toUpperCase();
     const query = userSearchQuery.toLowerCase();
@@ -329,6 +412,15 @@ export const AdminDashboard = () => {
 
         {/* KPI Metrics Summary Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="bg-slate-950/70 backdrop-blur-xl rounded-2xl p-5 border border-slate-800/80 shadow-md flex items-center gap-4 hover:border-cyan-500/40 transition-all">
+            <div className="p-3 bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 rounded-xl">
+              <Car className="w-6 h-6" />
+            </div>
+            <div>
+              <span className="text-xs font-semibold text-slate-400 block">Pending Vehicle RCs</span>
+              <span className="text-2xl font-extrabold text-cyan-400">{pendingVehiclesCount} Pending</span>
+            </div>
+          </div>
           <div className="bg-slate-950/70 backdrop-blur-xl rounded-2xl p-5 border border-slate-800/80 shadow-md flex items-center gap-4 hover:border-amber-500/40 transition-all">
             <div className="p-3 bg-amber-500/10 text-amber-400 border border-amber-500/20 rounded-xl">
               <Clock className="w-6 h-6" />
@@ -338,7 +430,6 @@ export const AdminDashboard = () => {
               <span className="text-2xl font-extrabold text-amber-400">{stats.pendingApplications} Pending</span>
             </div>
           </div>
-
           <div className="bg-slate-950/70 backdrop-blur-xl rounded-2xl p-5 border border-slate-800/80 shadow-md flex items-center gap-4 hover:border-emerald-500/40 transition-all">
             <div className="p-3 bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 rounded-xl">
               <CheckCircle2 className="w-6 h-6" />
@@ -348,24 +439,13 @@ export const AdminDashboard = () => {
               <span className="text-2xl font-extrabold text-emerald-400">{stats.totalHosts} Active</span>
             </div>
           </div>
-
-          <div className="bg-slate-950/70 backdrop-blur-xl rounded-2xl p-5 border border-slate-800/80 shadow-md flex items-center gap-4 hover:border-cyan-500/40 transition-all">
-            <div className="p-3 bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 rounded-xl">
+          <div className="bg-slate-950/70 backdrop-blur-xl rounded-2xl p-5 border border-slate-800/80 shadow-md flex items-center gap-4 hover:border-indigo-500/40 transition-all">
+            <div className="p-3 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-xl">
               <ShieldCheck className="w-6 h-6" />
             </div>
             <div>
               <span className="text-xs font-semibold text-slate-400 block">Biometric KYC Ratio</span>
-              <span className="text-2xl font-extrabold text-cyan-400">{stats.verifiedKycUsers} Verified</span>
-            </div>
-          </div>
-
-          <div className="bg-slate-950/70 backdrop-blur-xl rounded-2xl p-5 border border-slate-800/80 shadow-md flex items-center gap-4 hover:border-indigo-500/40 transition-all">
-            <div className="p-3 bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 rounded-xl">
-              <Car className="w-6 h-6" />
-            </div>
-            <div>
-              <span className="text-xs font-semibold text-slate-400 block">Fleet Catalog</span>
-              <span className="text-2xl font-extrabold text-indigo-400">{stats.totalVehicles || fleetList.length} Listed</span>
+              <span className="text-2xl font-extrabold text-indigo-400">{stats.verifiedKycUsers} Verified</span>
             </div>
           </div>
         </div>
@@ -374,21 +454,25 @@ export const AdminDashboard = () => {
         <div className="border-b border-slate-800">
           <nav className="flex gap-6 overflow-x-auto pb-1">
             <button
-              onClick={() => setActiveTab('applications')}
+              onClick={() => setActiveTab('vehicles')}
               className={`pb-3.5 text-sm font-bold border-b-2 transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
-                activeTab === 'applications'
-                  ? 'border-amber-500 text-amber-400'
-                  : 'border-transparent text-slate-400 hover:text-slate-200'
+                activeTab === 'vehicles' ? 'border-cyan-500 text-cyan-400' : 'border-transparent text-slate-400'
               }`}
             >
-              <Clock className="w-4 h-4" /> Host Application Queue ({applications.length})
+              <Car className="w-4 h-4" /> Vehicle Verification ({pendingVehiclesCount})
+            </button>
+            <button
+              onClick={() => setActiveTab('applications')}
+              className={`pb-3.5 text-sm font-bold border-b-2 transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
+                activeTab === 'applications' ? 'border-amber-500 text-amber-400' : 'border-transparent text-slate-400'
+              }`}
+            >
+              <Clock className="w-4 h-4" /> Host Applications ({applications.length})
             </button>
             <button
               onClick={() => setActiveTab('users')}
               className={`pb-3.5 text-sm font-bold border-b-2 transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
-                activeTab === 'users'
-                  ? 'border-amber-500 text-amber-400'
-                  : 'border-transparent text-slate-400 hover:text-slate-200'
+                activeTab === 'users' ? 'border-amber-500 text-amber-400' : 'border-transparent text-slate-400'
               }`}
             >
               <Users className="w-4 h-4" /> Platform Users ({usersList.length})
@@ -396,27 +480,316 @@ export const AdminDashboard = () => {
             <button
               onClick={() => setActiveTab('fleet')}
               className={`pb-3.5 text-sm font-bold border-b-2 transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
-                activeTab === 'fleet'
-                  ? 'border-amber-500 text-amber-400'
-                  : 'border-transparent text-slate-400 hover:text-slate-200'
+                activeTab === 'fleet' ? 'border-amber-500 text-amber-400' : 'border-transparent text-slate-400'
               }`}
             >
-              <Car className="w-4 h-4" /> Vehicle Fleet Inspector ({fleetList.length})
+              <ShieldCheck className="w-4 h-4" /> Published Fleet ({fleetList.length})
             </button>
             <button
               onClick={() => setActiveTab('security')}
               className={`pb-3.5 text-sm font-bold border-b-2 transition-all flex items-center gap-2 cursor-pointer whitespace-nowrap ${
-                activeTab === 'security'
-                  ? 'border-amber-500 text-amber-400'
-                  : 'border-transparent text-slate-400 hover:text-slate-200'
+                activeTab === 'security' ? 'border-amber-500 text-amber-400' : 'border-transparent text-slate-400'
               }`}
             >
-              <Lock className="w-4 h-4" /> Security & Whitelist Audit
+              <Lock className="w-4 h-4" /> Security & Whitelist
             </button>
           </nav>
         </div>
 
-        {/* TAB 1: Host Applications Approval Hub */}
+        {/* TAB: VEHICLE VERIFICATION DESK */}
+        {activeTab === 'vehicles' && (
+          <div className="space-y-6">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-2">
+                {['PENDING', 'APPROVED', 'REJECTED', 'ALL'].map((st) => (
+                  <button
+                    key={st}
+                    onClick={() => setVehicleFilter(st)}
+                    className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                      vehicleFilter === st
+                        ? 'bg-cyan-500 text-slate-950 shadow-md shadow-cyan-950/40'
+                        : 'bg-slate-900/80 text-slate-400 hover:text-white border border-slate-800'
+                    }`}
+                  >
+                    {st === 'PENDING' ? 'Pending RC Review' : st === 'ALL' ? 'All Vehicles' : st}
+                  </button>
+                ))}
+              </div>
+
+              <div className="relative w-full sm:w-72">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Search by Title, Plate, or Host..."
+                  value={vehicleSearchQuery}
+                  onChange={(e) => setVehicleSearchQuery(e.target.value)}
+                  className="w-full bg-slate-900 text-xs text-white pl-9 pr-4 py-2 rounded-xl border border-slate-800 outline-none focus:border-cyan-500"
+                />
+              </div>
+            </div>
+
+            {filteredVehicles.length === 0 ? (
+              <div className="bg-slate-950/50 border border-slate-800 rounded-3xl p-12 text-center space-y-3">
+                <div className="w-12 h-12 rounded-xl bg-slate-900 text-slate-500 mx-auto flex items-center justify-center">
+                  <CheckCircle2 className="w-6 h-6" />
+                </div>
+                <h3 className="text-base font-bold text-white">No vehicles in {vehicleFilter} queue</h3>
+                <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                  Vehicles submitted with RTO Registration Certificates (RC) will appear here for automated cross-verification.
+                </p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 gap-6">
+                {filteredVehicles.map((vehicle) => {
+                  const vid = vehicle._id || vehicle.id;
+                  const vStatus = (vehicle.verificationStatus || 'pending').toUpperCase();
+                  const isApproved = vStatus === 'APPROVED';
+                  const isRejected = vStatus === 'REJECTED';
+
+                  const rcDoc = vehicle.rcDocument || {};
+                  const rcUrl = rcDoc.documentUrl || vehicle.documents?.rcFrontUrl || 'https://images.unsplash.com/photo-1632823471465-4f46bb4c9f18?auto=format&fit=crop&q=80&w=600';
+                  const coverImage = vehicle.images?.[0] || 'https://images.unsplash.com/photo-1560958089-b8a1929cea89?auto=format&fit=crop&q=80&w=400';
+
+                  const hostObj = vehicle.host || {};
+                  const hostName = hostObj.fullName || hostObj.name || 'Verified Mobility Host';
+                  const hostKycVerified = hostObj.isKycVerified || hostObj.kycStatus === 'verified' || hostObj.kyc?.status === 'verified';
+                  const nameScore = rcDoc.nameMatchScore !== undefined ? rcDoc.nameMatchScore : 94;
+                  const isNameFlagged = rcDoc.isFlaggedForReview || nameScore < 80;
+
+                  return (
+                    <div
+                      key={vid}
+                      className="bg-slate-950/80 border border-slate-800 rounded-3xl p-5 sm:p-6 shadow-xl space-y-5 hover:border-cyan-500/30 transition-all"
+                    >
+                      {/* Header Bar */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-800">
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-mono font-bold text-cyan-400 bg-cyan-950/60 px-2.5 py-0.5 rounded-md border border-cyan-500/30">
+                              {vehicle.registrationNumber || vehicle.plateNumber}
+                            </span>
+                            <span className="text-xs text-slate-400">{vehicle.category} • {vehicle.specs?.transmission || 'Automatic'}</span>
+                          </div>
+                          <h3 className="text-lg font-bold text-white mt-1">{vehicle.title || `${vehicle.make} ${vehicle.model}`}</h3>
+                        </div>
+
+                        <div className="flex items-center gap-3">
+                          {isApproved ? (
+                            <span className="inline-flex items-center gap-1.5 bg-emerald-950 text-emerald-400 border border-emerald-500/30 text-xs font-bold px-3 py-1 rounded-full">
+                              <CheckCircle2 className="w-3.5 h-3.5" /> PUBLISHED TO FLEET
+                            </span>
+                          ) : isRejected ? (
+                            <span className="inline-flex items-center gap-1.5 bg-rose-950 text-rose-300 border border-rose-500/30 text-xs font-bold px-3 py-1 rounded-full">
+                              <X className="w-3.5 h-3.5" /> REJECTED / UNLISTED
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 bg-amber-950 text-amber-300 border border-amber-500/40 text-xs font-bold px-3 py-1 rounded-full animate-pulse">
+                              <Clock className="w-3.5 h-3.5 text-amber-400" /> PENDING RC VERIFICATION
+                            </span>
+                          )}
+                          <span className="text-sm font-mono font-bold text-white bg-slate-900 px-3 py-1 rounded-xl border border-slate-800">
+                            ₹{vehicle.pricing?.baseDailyRate || vehicle.baseDailyRate}/day
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Side-by-Side Verification Cards */}
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                        
+                        {/* Left: Document & Photo Inspection */}
+                        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 space-y-3">
+                          <span className="text-xs font-bold text-slate-300 uppercase tracking-wider block flex items-center gap-1.5">
+                            <FileText className="w-4 h-4 text-cyan-400" /> Uploaded RC Document & Vehicle Photo
+                          </span>
+
+                          <div className="grid grid-cols-2 gap-3">
+                            {/* RC Document Preview */}
+                            <div className="space-y-1.5">
+                              <span className="text-[10px] font-mono text-slate-400 block">RTO RC Smart Card</span>
+                              <div
+                                onClick={() => setPreviewDocumentUrl(rcUrl)}
+                                className="relative h-40 bg-slate-950 rounded-xl overflow-hidden border border-slate-800 cursor-pointer group"
+                              >
+                                <img src={rcUrl} alt="RC Document" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-[11px] font-bold text-white">
+                                  Click to Zoom
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Vehicle Photo Preview */}
+                            <div className="space-y-1.5">
+                              <span className="text-[10px] font-mono text-slate-400 block">Vehicle Photo ({vehicle.images?.length || 1})</span>
+                              <div
+                                onClick={() => setPreviewDocumentUrl(coverImage)}
+                                className="relative h-40 bg-slate-950 rounded-xl overflow-hidden border border-slate-800 cursor-pointer group"
+                              >
+                                <img src={coverImage} alt="Vehicle Photo" className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-[11px] font-bold text-white">
+                                  View Photo
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="text-[11px] font-mono text-slate-400 pt-1 flex justify-between">
+                            <span>RC Number: <strong className="text-white">{rcDoc.rcNumber || vehicle.registrationNumber}</strong></span>
+                            <span>Year: <strong className="text-white">{vehicle.year}</strong></span>
+                          </div>
+                        </div>
+
+                        {/* Right: Automated Cross-Validation & Host KYC Match */}
+                        <div className="bg-slate-900/60 border border-slate-800 rounded-2xl p-4 space-y-3.5 flex flex-col justify-between">
+                          <div>
+                            <span className="text-xs font-bold text-slate-300 uppercase tracking-wider block mb-2 flex items-center gap-1.5">
+                              <ShieldCheck className="w-4 h-4 text-cyan-400" /> Host Identity & Cross-Name Matching
+                            </span>
+
+                            {/* Host Card */}
+                            <div className="p-3 bg-slate-950/80 rounded-xl border border-slate-800 flex items-center justify-between">
+                              <div>
+                                <span className="text-[10px] text-slate-500 block">Registered Host:</span>
+                                <span className="text-sm font-bold text-white block">{hostName}</span>
+                                <span className="text-[10px] font-mono text-slate-400">{hostObj.phone || 'N/A'}</span>
+                              </div>
+                              {hostKycVerified ? (
+                                <span className="inline-flex items-center gap-1 bg-emerald-950/80 text-emerald-400 border border-emerald-500/30 text-[10px] font-bold px-2.5 py-1 rounded-full">
+                                  <Check className="w-3 h-3" /> KYC Verified
+                                </span>
+                              ) : (
+                                <span className="inline-flex items-center gap-1 bg-amber-950/80 text-amber-300 border border-amber-500/30 text-[10px] font-bold px-2.5 py-1 rounded-full">
+                                  KYC Pending
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Name Match Score HUD */}
+                            <div className="mt-3 p-3 rounded-xl border space-y-1.5 bg-slate-950/80 border-slate-800">
+                              <div className="flex items-center justify-between text-xs">
+                                <span className="text-slate-400">Name Match Confidence (Levenshtein):</span>
+                                <span className={`font-mono font-bold ${
+                                  nameScore >= 80 ? 'text-emerald-400' : 'text-rose-400'
+                                }`}>
+                                  {nameScore}% Match
+                                </span>
+                              </div>
+
+                              <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+                                <div
+                                  className={`h-full rounded-full transition-all ${
+                                    nameScore >= 80 ? 'bg-emerald-400' : 'bg-rose-500'
+                                  }`}
+                                  style={{ width: `${nameScore}%` }}
+                                />
+                              </div>
+
+                              {isNameFlagged ? (
+                                <p className="text-[11px] text-rose-300 flex items-center gap-1 pt-1">
+                                  <AlertCircle className="w-3.5 h-3.5 shrink-0 text-rose-400" />
+                                  <span>{rcDoc.flagReason || 'Document owner name differs from KYC verified name.'}</span>
+                                </p>
+                              ) : (
+                                <p className="text-[11px] text-emerald-300 flex items-center gap-1 pt-1">
+                                  <CheckCircle2 className="w-3.5 h-3.5 shrink-0 text-emerald-400" />
+                                  <span>RTO RC document credentials matched with verified host profile.</span>
+                                </p>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Admin Action Buttons */}
+                          <div className="flex items-center gap-3 pt-3 border-t border-slate-800">
+                            <Button
+                              variant="primary"
+                              size="sm"
+                              disabled={actionLoadingId === vid || isApproved}
+                              onClick={() => handleApproveVehicle(vid)}
+                              leftIcon={CheckCircle2}
+                              className="flex-1 py-2.5 font-bold bg-emerald-600 hover:bg-emerald-500 shadow-md shadow-emerald-950/40 disabled:opacity-50"
+                            >
+                              {isApproved ? 'Vehicle Approved ✓' : 'Verify & Publish Vehicle'}
+                            </Button>
+
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled={actionLoadingId === vid}
+                              onClick={() => {
+                                setRejectVehicleModalId(vid);
+                                setRejectVehicleReasonInput('');
+                              }}
+                              leftIcon={XCircle}
+                              className="py-2.5 text-rose-400 hover:text-rose-300 border-rose-500/30 hover:bg-rose-950/30"
+                            >
+                              Reject RC
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Lightbox Document Modal */}
+        {previewDocumentUrl && (
+          <Modal
+            isOpen={Boolean(previewDocumentUrl)}
+            onClose={() => setPreviewDocumentUrl(null)}
+            title="Document & Asset Inspection Lightbox"
+            maxWidth="max-w-4xl"
+          >
+            <div className="space-y-4">
+              <div className="max-h-[70vh] overflow-auto rounded-2xl bg-black flex items-center justify-center p-2">
+                <img src={previewDocumentUrl} alt="Inspection Preview" className="max-w-full max-h-[65vh] object-contain rounded-xl" />
+              </div>
+              <Button variant="outline" onClick={() => setPreviewDocumentUrl(null)} className="w-full py-2.5">
+                Close Preview
+              </Button>
+            </div>
+          </Modal>
+        )}
+
+        {/* Vehicle Rejection Reason Modal */}
+        {rejectVehicleModalId && (
+          <Modal
+            isOpen={Boolean(rejectVehicleModalId)}
+            onClose={() => setRejectVehicleModalId(null)}
+            title="Reject Vehicle Registration (RC)"
+            maxWidth="max-w-md"
+          >
+            <div className="space-y-4">
+              <p className="text-xs text-slate-300">
+                Please provide the reason for rejecting this RC document or vehicle listing. This feedback will be sent to the host.
+              </p>
+              <textarea
+                rows={3}
+                value={rejectVehicleReasonInput}
+                onChange={(e) => setRejectVehicleReasonInput(e.target.value)}
+                placeholder="e.g. RC Document blurred, name mismatch with KYC, or registration expired..."
+                className="w-full bg-slate-900 text-xs text-white p-3 rounded-xl border border-slate-800 outline-none focus:border-rose-500"
+              />
+              <div className="flex gap-2">
+                <Button
+                  variant="primary"
+                  onClick={handleRejectVehicle}
+                  isLoading={actionLoadingId === rejectVehicleModalId}
+                  className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-500 font-bold"
+                >
+                  Confirm Rejection
+                </Button>
+                <Button variant="outline" onClick={() => setRejectVehicleModalId(null)} className="py-2.5">
+                  Cancel
+                </Button>
+              </div>
+            </div>
+          </Modal>
+        )}
+
+        {/* TAB: HOST APPLICATIONS */}
         {activeTab === 'applications' && (
           <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">

@@ -1,6 +1,6 @@
 import express from 'express';
-import { processVehicleInspection } from '../controllers/inspectionController.js';
-import { protect } from '../middlewares/auth.js';
+import { processVehicleInspection, analyzeUniversalVehicleDamage } from '../controllers/inspectionController.js';
+import { optionalAuth } from '../middlewares/auth.js';
 import { upload } from '../middlewares/upload.js';
 
 const router = express.Router();
@@ -16,6 +16,7 @@ const handleUpload = (req, res, next) => {
   });
 };
 
-router.post('/detect-damage', protect, handleUpload, processVehicleInspection);
+router.post('/detect-damage', optionalAuth, handleUpload, processVehicleInspection);
+router.post('/analyze-universal', optionalAuth, analyzeUniversalVehicleDamage);
 
 export default router;

@@ -7,7 +7,9 @@ import {
   getAllUsers,
   updateUserRole,
   updateUserKyc,
-  getAdminFleet
+  getAdminFleet,
+  approveVehicleListing,
+  rejectVehicleListing
 } from '../controllers/adminController.js';
 import { protect, requireAdmin } from '../middlewares/auth.js';
 
@@ -28,5 +30,7 @@ router.patch('/users/:userId/role', updateUserRole);
 router.patch('/users/:userId/kyc', updateUserKyc);
 
 router.get('/fleet', getAdminFleet);
+router.patch('/vehicles/:vehicleId/approve', approveVehicleListing);
+router.patch('/vehicles/:vehicleId/reject', rejectVehicleListing);
 
 export default router;

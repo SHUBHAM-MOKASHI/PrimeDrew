@@ -52,9 +52,9 @@ const limiter = rateLimit({
 });
 app.use('/api', limiter);
 
-// Body and Cookie Parsers
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+// Body and Cookie Parsers (50MB for dual high-res Base64 image inspection transfers)
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(cookieParser());
 
 // System Health Check Route
@@ -72,6 +72,7 @@ app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/vehicles', vehicleRoutes);
 app.use('/api/v1/bookings', bookingRoutes);
 app.use('/api/v1/inspections', inspectionRoutes);
+app.use('/api/damage', inspectionRoutes);
 app.use('/api/v1/kyc', kycRoutes);
 app.use('/api/v1/users', userRoutes);
 app.use('/api/v1/admin', adminRoutes);

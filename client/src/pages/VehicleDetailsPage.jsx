@@ -5,6 +5,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Star, ShieldCheck, MapPin, Gauge, Fuel, Users, CheckCircle2, Clock, Calendar, ArrowLeft, Lock, Sparkles } from 'lucide-react';
 import Button from '../components/common/Button';
 import BookingCheckoutDrawer from '../components/booking/BookingCheckoutDrawer';
+import VehicleGallery from '../components/fleet/VehicleGallery';
 import { getVehicleById } from '../services/vehicleService';
 
 export const VehicleDetailsPage = () => {
@@ -125,34 +126,12 @@ export const VehicleDetailsPage = () => {
           </div>
         </div>
 
-        {/* Hero Gallery Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 rounded-3xl overflow-hidden shadow-2xl border border-slate-800 bg-slate-900/60 backdrop-blur-2xl p-2">
-          <div className="lg:col-span-2 h-[340px] sm:h-[450px] relative bg-slate-950 rounded-2xl overflow-hidden">
-            <img
-              src={vehicle.images?.[selectedImage] || vehicle.images?.[0]}
-              alt={vehicle.title}
-              className="w-full h-full object-cover"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent pointer-events-none" />
-            <span className="absolute top-4 left-4 bg-emerald-950/70 text-emerald-400 border border-emerald-500/40 text-xs font-semibold px-3 py-1 rounded-full inline-flex items-center gap-1.5 shadow-sm backdrop-blur-md">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> Verified Host Listing
-            </span>
-          </div>
-
-          <div className="hidden lg:grid grid-rows-2 gap-3 h-[450px]">
-            {vehicle.images?.slice(1, 3).map((img, idx) => (
-              <div
-                key={idx}
-                onClick={() => setSelectedImage(idx + 1)}
-                className={`relative overflow-hidden cursor-pointer bg-slate-950 rounded-2xl border-2 transition-all ${
-                  selectedImage === idx + 1 ? 'border-cyan-500 shadow-lg shadow-cyan-950/40' : 'border-slate-800 opacity-70 hover:opacity-100'
-                }`}
-              >
-                <img src={img} alt={`Angle ${idx + 2}`} className="w-full h-full object-cover hover:scale-105 transition-transform" />
-              </div>
-            ))}
-          </div>
-        </div>
+        {/* Interactive Multi-Angle Gallery */}
+        <VehicleGallery
+          images={vehicle.images}
+          title={vehicle.title}
+          isVerified={vehicle.verificationStatus === 'approved' || vehicle.isVerifiedByAdmin}
+        />
 
         {/* Main Details & Checkout Drawer Trigger Container */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

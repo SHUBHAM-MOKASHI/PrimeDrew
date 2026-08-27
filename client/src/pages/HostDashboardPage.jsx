@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Car, DollarSign, Clock, CheckCircle2, Plus, Calendar, CreditCard, SlidersHorizontal, Users, ShieldCheck, AlertCircle, Sparkles, ArrowRight, Lock } from 'lucide-react';
+import { Car, DollarSign, Clock, CheckCircle2, Plus, Calendar, CreditCard, SlidersHorizontal, Users, ShieldCheck, AlertCircle, Sparkles, ArrowRight, Lock, X } from 'lucide-react';
 import Button from '../components/common/Button';
 import HostFleetManager from '../components/host/HostFleetManager';
 import IncomingBookingsList from '../components/host/IncomingBookingsList';
@@ -77,7 +77,15 @@ export const HostDashboardPage = () => {
   if (!isLoggedIn) {
     return (
       <div className="min-h-[80vh] flex items-center justify-center px-4 py-12">
-        <div className="max-w-md w-full bg-slate-950/80 backdrop-blur-2xl border border-slate-800 rounded-3xl p-8 text-center space-y-5 shadow-2xl shadow-black">
+        <div className="max-w-md w-full bg-slate-950/80 backdrop-blur-2xl border border-slate-800 rounded-3xl p-8 text-center space-y-5 shadow-2xl shadow-black relative">
+          <button 
+            type="button"
+            onClick={() => window.history.back()}
+            className="absolute top-6 right-6 p-2 rounded-xl text-slate-400 hover:text-white bg-slate-800/60 hover:bg-slate-700/80 border border-slate-700/50 transition-all duration-150 cursor-pointer group"
+            aria-label="Close"
+          >
+            <X className="w-5 h-5 group-hover:scale-110 transition-transform"/>
+          </button>
           <div className="w-16 h-16 rounded-2xl bg-cyan-500/10 border border-cyan-500/20 text-cyan-400 mx-auto flex items-center justify-center">
             <Lock className="w-8 h-8" />
           </div>
@@ -98,10 +106,20 @@ export const HostDashboardPage = () => {
     return (
       <div className="min-h-[80vh] flex items-center justify-center px-4 py-12">
         <div className="max-w-2xl w-full bg-slate-950/90 backdrop-blur-2xl border border-slate-800/90 rounded-3xl p-8 sm:p-10 space-y-6 shadow-2xl shadow-black relative overflow-hidden">
+          {/* Top-Right Close Button */}
+          <button 
+            type="button"
+            onClick={() => window.history.back()}
+            className="absolute top-6 right-6 p-2 rounded-xl text-slate-400 hover:text-white bg-slate-800/60 hover:bg-slate-700/80 border border-slate-700/50 transition-all duration-150 cursor-pointer group z-20"
+            aria-label="Close"
+          >
+            <X className="w-5 h-5 group-hover:scale-110 transition-transform"/>
+          </button>
+
           {/* Ambient Glow */}
           <div className="absolute -top-24 -right-24 w-60 h-60 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none" />
 
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-5 border-b border-slate-800">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-5 border-b border-slate-800 pr-12">
             <div>
               <span className="inline-flex items-center gap-1.5 bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 text-xs font-bold px-3 py-1 rounded-full mb-2">
                 <Car className="w-3.5 h-3.5" /> Host Verification Gate
@@ -129,15 +147,15 @@ export const HostDashboardPage = () => {
               <div className="bg-amber-950/30 border border-amber-500/30 rounded-2xl p-5 space-y-3">
                 <div className="flex items-center gap-2 text-amber-300 font-bold text-sm">
                   <Clock className="w-5 h-5 text-amber-400 animate-spin" />
-                  <span>Application Under Review by Master Admin</span>
+                  <span>Application Under Review</span>
                 </div>
                 <p className="text-xs text-slate-300 leading-relaxed">
-                  Your host onboarding request for <strong className="text-white">{user?.fullName || user?.name}</strong> has been submitted to the Super Admin whitelist station (Phone: <strong className="text-cyan-400">7387861807</strong>).
+                  Your host onboarding request for <strong className="text-white">{user?.fullName || user?.name || 'User'}</strong> has been submitted to the PrimeDrew Verification Team for review.
                 </p>
                 <div className="text-[11px] text-slate-400 font-mono space-y-1 pt-2 border-t border-amber-500/20">
                   <div>City: <span className="text-slate-200">{user?.hostApplicationDetails?.city || 'Mumbai'}</span></div>
                   <div>Applied At: <span className="text-slate-200">{new Date(user?.hostApplicationDetails?.appliedAt || Date.now()).toLocaleString()}</span></div>
-                  <div>Status: <span className="text-amber-400 font-bold">Awaiting Super Admin 1-Click Clearance</span></div>
+                  <div>Status: <span className="text-amber-400 font-bold">Awaiting Verification Team Clearance</span></div>
                 </div>
               </div>
 
@@ -178,7 +196,7 @@ export const HostDashboardPage = () => {
           ) : (
             <div className="space-y-5">
               <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                To maintain vehicle safety and guarantee secure peer-to-peer escrows, all hosts must be verified and approved by the Master Admin before listing vehicles or managing rental earnings.
+                To maintain vehicle safety and guarantee secure peer-to-peer escrows, all hosts must be verified and approved by the Verification Team before listing vehicles or managing rental earnings.
               </p>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

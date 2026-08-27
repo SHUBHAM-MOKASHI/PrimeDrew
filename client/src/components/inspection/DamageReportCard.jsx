@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
-import { AlertTriangle, ShieldCheck, CheckSquare, Square, AlertOctagon, Info } from 'lucide-react';
-import Button from '../common/Button';
+import { AlertTriangle, ShieldCheck, CheckSquare, Square, AlertOctagon, Info, CheckCircle2 } from 'lucide-react';
 
 export const DamageReportCard = ({
   detections = [],
@@ -36,22 +35,28 @@ export const DamageReportCard = ({
       default:
         return (
           <span className="bg-emerald-950/80 text-emerald-400 border border-emerald-500/30 text-xs font-semibold px-3 py-1 rounded-full inline-flex items-center gap-1.5 shadow-[0_0_15px_rgba(16,185,129,0.25)]">
-            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> Pre-Trip Verified Clean
+            <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> 🟢 Clean / No New Damage Detected
           </span>
         );
     }
   };
 
   return (
-    <div className="bg-zinc-900/60 backdrop-blur-xl rounded-3xl border border-zinc-800/80 p-6 shadow-2xl space-y-6">
+    <div className="bg-slate-900/80 backdrop-blur-xl rounded-3xl border border-slate-800 p-6 shadow-2xl space-y-6">
       
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-zinc-800">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-800">
         <div>
-          <h3 className="text-lg font-bold text-zinc-100">
+          <h3 className="text-lg font-bold text-slate-100">
             {stage === 'pickup' ? 'Pre-Trip Pickup Inspection Report' : 'Post-Trip Return Inspection Report'}
           </h3>
-          <p className="text-xs text-zinc-400 mt-0.5">YOLOv8 Object Detection Bounding Box Summary</p>
+          <p className="text-xs text-slate-400 mt-0.5 font-mono">
+            {detections.length > 0 ? (
+              <span className="text-rose-400 font-bold">🔴 {detections.length} Total Detections ({detections.length} New)</span>
+            ) : (
+              <span className="text-emerald-400 font-bold">🟢 0 Total Detections (0 New)</span>
+            )}
+          </p>
         </div>
         {getSeverityBadge()}
       </div>
@@ -63,7 +68,7 @@ export const DamageReportCard = ({
           <div>
             <span className="font-bold text-sm text-rose-100 block">New Unrecorded Damage Detected!</span>
             <p className="text-rose-300 mt-0.5 leading-snug">
-              Post-trip AI scan detected new structural or surface damages not present in the pre-trip baseline inspection. Security deposit hold (₹2,000 - ₹5,000) may be flagged for host review.
+              Post-trip AI scan detected localized defect anomalies not present in the pre-trip baseline inspection. Security deposit hold (₹2,000 - ₹5,000) may be flagged for host review.
             </p>
           </div>
         </div>
@@ -71,16 +76,20 @@ export const DamageReportCard = ({
 
       {/* Detections Itemized Log Table */}
       {detections.length === 0 ? (
-        <div className="bg-zinc-950/60 rounded-2xl p-8 text-center text-zinc-400 text-xs space-y-1 border border-zinc-800">
-          <ShieldCheck className="w-8 h-8 text-emerald-400 mx-auto mb-2" />
-          <span className="font-bold text-zinc-100 text-sm block">No Bounding Box Damages Detected</span>
-          <p>Vehicle exterior matches clean platform quality guidelines.</p>
+        <div className="bg-slate-950/60 rounded-2xl p-8 text-center text-slate-400 text-xs space-y-2 border border-slate-800/80">
+          <div className="w-12 h-12 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto mb-2">
+            <CheckCircle2 className="w-6 h-6" />
+          </div>
+          <span className="font-bold text-emerald-300 text-sm block">Vehicle Pristine - Clean Baseline Match</span>
+          <p className="text-slate-400 max-w-sm mx-auto leading-relaxed">
+            Zero structural cracks, bumper dents, or paint scratches detected. Vehicle surface matches platform pristine quality standards.
+          </p>
         </div>
       ) : (
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-zinc-950/80 border-b border-zinc-800 text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
+              <tr className="bg-slate-950/80 border-b border-slate-800 text-[11px] font-bold text-slate-400 uppercase tracking-wider">
                 <th className="p-3">#</th>
                 <th className="p-3">Damage Classification</th>
                 <th className="p-3">AI Confidence</th>
@@ -88,36 +97,37 @@ export const DamageReportCard = ({
                 <th className="p-3 text-right">Acknowledgement</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-zinc-800 text-xs">
+            <tbody className="divide-y divide-slate-800 text-xs">
               {detections.map((det, idx) => {
                 const isSelected = selectedDetectionIndex === idx;
                 const isAck = !!acknowledgedItems[idx];
+                const dType = det.damageType || det.damage_type || 'Defect';
 
                 return (
                   <tr
                     key={idx}
                     onClick={() => onSelectDetection && onSelectDetection(idx)}
                     className={`cursor-pointer transition-colors ${
-                      isSelected ? 'bg-indigo-500/20 font-semibold border-l-2 border-indigo-400' : 'hover:bg-zinc-800/40'
+                      isSelected ? 'bg-cyan-500/20 font-semibold border-l-2 border-cyan-400' : 'hover:bg-slate-800/40'
                     }`}
                   >
-                    <td className="p-3 font-bold text-zinc-500 font-mono">{idx + 1}</td>
+                    <td className="p-3 font-bold text-slate-500 font-mono">{idx + 1}</td>
                     <td className="p-3">
-                      <span className="font-bold text-zinc-100 block">{det.damageType}</span>
-                      <span className="text-[11px] text-zinc-400">{det.location || 'Exterior Surface'}</span>
+                      <span className="font-bold text-slate-100 capitalize block">{dType}</span>
+                      <span className="text-[11px] text-slate-400">{det.location || 'Exterior Surface Defect'}</span>
                     </td>
-                    <td className="p-3 font-bold text-indigo-400 font-mono">
-                      {Math.round((det.confidence || 0.9) * 100)}%
+                    <td className="p-3 font-bold text-cyan-400 font-mono">
+                      {Math.round((det.confidence || 0.85) * 100)}%
                     </td>
                     <td className="p-3">
                       <span
                         className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                          det.damageType?.toLowerCase().includes('dent')
+                          dType.toLowerCase().includes('dent')
                             ? 'bg-rose-950/80 text-rose-300 border border-rose-500/30'
                             : 'bg-amber-950/80 text-amber-300 border border-amber-500/30'
                         }`}
                       >
-                        {det.damageType?.toLowerCase().includes('dent') ? 'Moderate' : 'Low'}
+                        {dType.toLowerCase().includes('dent') ? 'Moderate' : 'Low'}
                       </span>
                     </td>
                     <td className="p-3 text-right">
@@ -127,12 +137,12 @@ export const DamageReportCard = ({
                           e.stopPropagation();
                           toggleAcknowledge(idx);
                         }}
-                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-300 hover:text-indigo-400 cursor-pointer"
+                        className="inline-flex items-center gap-1.5 text-xs font-semibold text-slate-300 hover:text-cyan-400 cursor-pointer"
                       >
                         {isAck ? (
                           <CheckSquare className="w-4 h-4 text-emerald-400" />
                         ) : (
-                          <Square className="w-4 h-4 text-zinc-600" />
+                          <Square className="w-4 h-4 text-slate-600" />
                         )}
                         <span>{isAck ? 'Acknowledged' : 'Verify'}</span>
                       </button>
@@ -145,11 +155,11 @@ export const DamageReportCard = ({
         </div>
       )}
 
-      <div className="bg-zinc-950/60 border border-zinc-800 rounded-2xl p-4 text-xs text-zinc-400 flex items-center justify-between">
+      <div className="bg-slate-950/60 border border-slate-800 rounded-2xl p-4 text-xs text-slate-400 flex items-center justify-between">
         <span className="flex items-center gap-1.5">
-          <Info className="w-4 h-4 text-indigo-400" /> AI Confidence Threshold: &gt;= 85% Precision
+          <Info className="w-4 h-4 text-cyan-400" /> AI Confidence Threshold: &gt;= 50% Precision
         </span>
-        <span className="font-bold text-zinc-200 font-mono">
+        <span className="font-bold text-slate-200 font-mono">
           {Object.keys(acknowledgedItems).length} of {detections.length} Items Signed
         </span>
       </div>
@@ -159,4 +169,3 @@ export const DamageReportCard = ({
 };
 
 export default DamageReportCard;
-

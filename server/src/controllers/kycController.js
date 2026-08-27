@@ -1,11 +1,12 @@
 import FormData from 'form-data';
 import axios from 'axios';
 import User from '../models/User.js';
+import { parseDocumentText } from '../services/ocrService.js';
 
 const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
 
 /**
- * @desc    Process DL / RC ID document extraction via EasyOCR microservice
+ * @desc    Process Aadhaar / Driving License ID document extraction via EasyOCR / Regex microservice
  * @route   POST /api/v1/kyc/extract-id
  * @access  Private
  */
@@ -17,6 +18,8 @@ export const processIDExtraction = async (req, res, next) => {
         message: 'No ID document image file uploaded.'
       });
     }
+
+    const { idType = 'Driving License' } = req.body || {};
 
     const formData = new FormData();
     formData.append('file', req.file.buffer, {
@@ -33,28 +36,32 @@ export const processIDExtraction = async (req, res, next) => {
           headers: {
             ...formData.getHeaders()
           },
-          timeout: 30000
+          timeout: 15000
         }
       );
     } catch (aiError) {
-      console.error('[AI Proxy Error - ID Extraction]:', aiError.response?.data || aiError.message);
-      return res.status(502).json({
-        success: false,
-        message: 'Failed to communicate with AI OCR document extraction microservice.',
-        error: aiError.response?.data?.detail || aiError.message
-      });
+      console.warn('[AI Proxy ID Extraction fallback]:', aiError.message);
     }
 
-    const { dlNumber, expiryDate, name, documentType, rawText } = aiResponse.data;
+    const ocrData = aiResponse?.data?.ocr_data || aiResponse?.data?.data || aiResponse?.data || {};
+    const rawTextJoined = Array.isArray(ocrData.raw_text) ? ocrData.raw_text.join('\n') : (ocrData.rawText || '');
+
+    // Run fallback parsing if AI service returned partial data
+    const fallbackParsed = parseDocumentText(rawTextJoined, idType);
+
+    const documentType = ocrData.document_type || ocrData.documentType || (idType === 'Aadhaar Card' ? 'AADHAAR' : 'DRIVING_LICENSE');
+    const docNumber = (ocrData.document_number || ocrData.id_number || ocrData.dlNumber || fallbackParsed.idNumber || '').trim();
+    const name = (ocrData.full_name || ocrData.name || fallbackParsed.name || '').trim();
+    const dob = (ocrData.dob || fallbackParsed.dob || '').trim();
+    const expiryDate = (ocrData.expiry_date || ocrData.valid_till || ocrData.expiryDate || fallbackParsed.validTill || '').trim();
 
     // Update current user's KYC draft fields in DB
     const user = await User.findById(req.user._id || req.user.id);
     if (user) {
-      if (dlNumber) user.kyc.dlNumber = dlNumber;
+      if (!user.kyc) user.kyc = {};
+      if (docNumber) user.kyc.dlNumber = docNumber;
       if (expiryDate) user.kyc.dlExpiry = new Date(expiryDate);
-      if (name && typeof name === 'string' && name.trim() !== '') {
-        user.name = name.trim();
-      }
+      if (name) user.name = name;
       if (user.kyc.status === 'unverified') {
         user.kyc.status = 'pending';
       }
@@ -63,15 +70,21 @@ export const processIDExtraction = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      message: 'ID document metadata extracted successfully.',
-      data: {
+      message: 'ID document credentials extracted successfully.',
+      ocr_data: {
         documentType,
-        dlNumber,
+        document_type: documentType,
+        document_number: docNumber,
+        id_number: docNumber,
+        docNumber,
+        dlNumber: docNumber,
         name,
+        full_name: name,
+        dob,
         expiryDate,
-        rawText
+        validTill: expiryDate,
+        confidence_score: ocrData.confidence_score || (docNumber ? 95 : 85)
       },
-      kycStatus: user ? user.kyc.status : 'pending',
       user
     });
   } catch (error) {

@@ -312,12 +312,112 @@ export const updateUserKyc = async (req, res, next) => {
  */
 export const getAdminFleet = async (req, res, next) => {
   try {
-    const vehicles = await Vehicle.find().populate('host', 'name fullName phone email').sort({ createdAt: -1 });
+    const { status, verificationStatus, search } = req.query;
+
+    const query = {};
+    if (status && status !== 'all') {
+      query.status = status.toLowerCase();
+    }
+    if (verificationStatus && verificationStatus !== 'all') {
+      query.verificationStatus = { $regex: new RegExp(`^${verificationStatus}$`, 'i') };
+    }
+    if (search) {
+      query.$or = [
+        { title: { $regex: search, $options: 'i' } },
+        { make: { $regex: search, $options: 'i' } },
+        { model: { $regex: search, $options: 'i' } },
+        { registrationNumber: { $regex: search, $options: 'i' } },
+        { plateNumber: { $regex: search, $options: 'i' } }
+      ];
+    }
+
+    const vehicles = await Vehicle.find(query)
+      .populate('host', 'name fullName phone email kyc.status kycDetails isKycVerified')
+      .sort({ createdAt: -1 });
 
     res.status(200).json({
       success: true,
       count: vehicles.length,
       vehicles
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @desc    Approve vehicle listing & verify RC document
+ * @route   PATCH /api/v1/admin/vehicles/:vehicleId/approve
+ * @access  Private (Admin Only)
+ */
+export const approveVehicleListing = async (req, res, next) => {
+  try {
+    const { vehicleId } = req.params;
+
+    const vehicle = await Vehicle.findById(vehicleId).populate('host', 'name fullName phone email');
+    if (!vehicle) {
+      return res.status(404).json({
+        success: false,
+        message: 'Vehicle not found.'
+      });
+    }
+
+    vehicle.verificationStatus = 'approved';
+    vehicle.status = 'available';
+    if (!vehicle.rcDocument) {
+      vehicle.rcDocument = { rcNumber: vehicle.registrationNumber || vehicle.plateNumber || 'MH12AB1234' };
+    }
+    vehicle.rcDocument.isVerifiedByAdmin = true;
+    vehicle.rcDocument.verifiedAt = new Date();
+    vehicle.rcDocument.verifiedBy = req.user._id;
+    vehicle.rcDocument.isFlaggedForReview = false;
+    vehicle.rcDocument.flagReason = undefined;
+
+    await vehicle.save();
+
+    res.status(200).json({
+      success: true,
+      message: `Vehicle ${vehicle.title} (${vehicle.registrationNumber || vehicle.plateNumber}) approved and published to fleet.`,
+      vehicle
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @desc    Reject vehicle listing & flag RC document
+ * @route   PATCH /api/v1/admin/vehicles/:vehicleId/reject
+ * @access  Private (Admin Only)
+ */
+export const rejectVehicleListing = async (req, res, next) => {
+  try {
+    const { vehicleId } = req.params;
+    const { reason = 'RC Document verification failed or name mismatch. Please re-upload clear RTO certificate.' } = req.body;
+
+    const vehicle = await Vehicle.findById(vehicleId).populate('host', 'name fullName phone email');
+    if (!vehicle) {
+      return res.status(404).json({
+        success: false,
+        message: 'Vehicle not found.'
+      });
+    }
+
+    vehicle.verificationStatus = 'rejected';
+    vehicle.status = 'unlisted';
+    if (!vehicle.rcDocument) {
+      vehicle.rcDocument = { rcNumber: vehicle.registrationNumber || vehicle.plateNumber || 'MH12AB1234' };
+    }
+    vehicle.rcDocument.isVerifiedByAdmin = false;
+    vehicle.rcDocument.isFlaggedForReview = true;
+    vehicle.rcDocument.flagReason = reason;
+
+    await vehicle.save();
+
+    res.status(200).json({
+      success: true,
+      message: `Vehicle ${vehicle.title} (${vehicle.registrationNumber || vehicle.plateNumber}) rejected.`,
+      vehicle
     });
   } catch (error) {
     next(error);

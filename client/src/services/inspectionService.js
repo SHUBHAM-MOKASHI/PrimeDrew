@@ -1,19 +1,20 @@
-import axios from 'axios';
+import { analyzeVehicleDamageAI, runDynamicDamageInference } from './damageDetectionService';
 
-const API_BASE = '/api/v1/inspections';
+export { analyzeVehicleDamageAI, runDynamicDamageInference };
 
-export const detectVehicleDamage = async (formData, token) => {
-  try {
-    const headers = {
-      'Content-Type': 'multipart/form-data'
-    };
-    if (token) {
-      headers.Authorization = `Bearer ${token}`;
-    }
-
-    const response = await axios.post(`${API_BASE}/detect-damage`, formData, { headers });
-    return response.data;
-  } catch (error) {
-    throw error.response?.data || error.message;
+/**
+ * Universal dynamic damage inference forwarding proxy
+ */
+export const detectVehicleDamage = async (arg1, arg2, arg3) => {
+  if (typeof arg1 === 'string' && typeof arg2 === 'string') {
+    const res = await analyzeVehicleDamageAI(arg1, arg2, arg3 || 'rear');
+    return res.detections;
   }
+  return [];
+};
+
+export default {
+  analyzeVehicleDamageAI,
+  runDynamicDamageInference,
+  detectVehicleDamage
 };

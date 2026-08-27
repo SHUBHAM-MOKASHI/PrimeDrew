@@ -17,6 +17,11 @@ const server = app.listen(PORT, () => {
   console.log(`=======================================================`);
 });
 
+// Configure server socket timeout for AI image processing (120 seconds)
+server.setTimeout(120000);
+server.keepAliveTimeout = 65000;
+server.headersTimeout = 66000;
+
 // Graceful Shutdown handling
 const gracefulShutdown = (signal) => {
   console.log(`\n[Server] Received ${signal}. Initiating graceful shutdown...`);

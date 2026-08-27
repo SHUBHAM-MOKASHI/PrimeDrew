@@ -49,8 +49,43 @@ const bookingSchema = new mongoose.Schema(
     },
     tripStatus: {
       type: String,
-      enum: ['requested', 'confirmed', 'active', 'completed', 'disputed', 'cancelled'],
-      default: 'requested'
+      enum: [
+        'requested',
+        'confirmed',
+        'active',
+        'completed',
+        'disputed',
+        'cancelled',
+        'CONFIRMED',
+        'HANDOVER_PENDING',
+        'IN_PROGRESS',
+        'COMPLETED',
+        'CANCELLED'
+      ],
+      default: 'CONFIRMED'
+    },
+    handoverOtp: {
+      type: String
+    },
+    handoverOtpExpiresAt: {
+      type: Date
+    },
+    tripStartTime: {
+      type: Date
+    },
+    tripEndTime: {
+      type: Date
+    },
+    actualStartTime: {
+      type: Date
+    },
+    actualEndTime: {
+      type: Date
+    },
+    vehicleLastKnownLocation: {
+      lat: Number,
+      lng: Number,
+      updatedAt: Date
     }
   },
   {

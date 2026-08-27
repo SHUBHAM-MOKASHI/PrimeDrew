@@ -44,6 +44,21 @@ const vehicleDocumentsSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const rcDocumentSchema = new mongoose.Schema(
+  {
+    rcNumber: { type: String, required: true, trim: true },
+    documentUrl: { type: String, required: true, trim: true },
+    extractedName: { type: String, trim: true },
+    nameMatchScore: { type: Number, default: 100 },
+    isFlaggedForReview: { type: Boolean, default: false },
+    flagReason: { type: String, trim: true },
+    isVerifiedByAdmin: { type: Boolean, default: false },
+    verifiedAt: { type: Date },
+    verifiedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' }
+  },
+  { _id: false }
+);
+
 const vehicleSchema = new mongoose.Schema(
   {
     host: {
@@ -76,10 +91,14 @@ const vehicleSchema = new mongoose.Schema(
       enum: ['Hatchback', 'Sedan', 'SUV', 'EV', 'Bike', 'Luxury'],
       required: [true, 'Category is required']
     },
+    registrationNumber: {
+      type: String,
+      required: [true, 'Registration number is required'],
+      uppercase: true,
+      trim: true
+    },
     plateNumber: {
       type: String,
-      required: [true, 'Plate number is required'],
-      unique: true,
       uppercase: true,
       trim: true
     },
@@ -97,7 +116,17 @@ const vehicleSchema = new mongoose.Schema(
     },
     images: {
       type: [String],
-      default: []
+      required: true,
+      validate: {
+        validator: function (val) {
+          return Array.isArray(val) && val.length >= 1;
+        },
+        message: 'At least 1 vehicle photo is required.'
+      }
+    },
+    rcDocument: {
+      type: rcDocumentSchema,
+      required: true
     },
     documents: {
       type: vehicleDocumentsSchema,

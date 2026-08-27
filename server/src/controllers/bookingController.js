@@ -283,3 +283,213 @@ export const updateBookingStatus = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * @desc    Generate a secure 6-digit Handover OTP for vehicle collection
+ * @route   POST /api/v1/bookings/:id/generate-handover-otp
+ * @access  Private (Renter, Host, Admin)
+ */
+export const generateHandoverOtp = async (req, res, next) => {
+  try {
+    const booking = await Booking.findById(req.params.id).populate('vehicle');
+
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: 'Booking not found.'
+      });
+    }
+
+    const isRenter = booking.renter.toString() === req.user._id.toString();
+    const isHost = booking.host.toString() === req.user._id.toString();
+    const isAdmin = req.user.role === 'ADMIN' || req.user.roles?.includes('ADMIN') || req.user.roles?.includes('admin');
+
+    if (!isRenter && !isHost && !isAdmin) {
+      return res.status(403).json({
+        success: false,
+        message: 'Forbidden. You are not authorized for this booking handover.'
+      });
+    }
+
+    // Generate random 6-digit OTP
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+    const expiresAt = new Date(Date.now() + 15 * 60 * 1000); // 15 mins validity
+
+    booking.handoverOtp = otp;
+    booking.handoverOtpExpiresAt = expiresAt;
+    booking.tripStatus = 'HANDOVER_PENDING';
+    if (!booking.tripStartTime) {
+      booking.tripStartTime = booking.startDate;
+    }
+    if (!booking.tripEndTime) {
+      booking.tripEndTime = booking.endDate;
+    }
+
+    await booking.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Vehicle Handover OTP generated successfully (Valid for 15 minutes).',
+      handoverOtp: otp,
+      handoverOtpExpiresAt: expiresAt,
+      tripStatus: booking.tripStatus,
+      booking
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @desc    Verify Handover OTP by Host to unlock vehicle and start live trip timer
+ * @route   POST /api/v1/bookings/:id/verify-handover-otp
+ * @access  Private (Host, Admin, or authorized Renter)
+ */
+export const verifyHandoverOtp = async (req, res, next) => {
+  try {
+    const { otp } = req.body;
+
+    if (!otp) {
+      return res.status(400).json({
+        success: false,
+        message: 'Please provide the 6-digit handover OTP.'
+      });
+    }
+
+    const booking = await Booking.findById(req.params.id).populate('vehicle');
+
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: 'Booking not found.'
+      });
+    }
+
+    // Check OTP match
+    if (!booking.handoverOtp || booking.handoverOtp !== otp.trim()) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid Handover OTP. Please verify the 6-digit code shown on the renter screen.'
+      });
+    }
+
+    // Check Expiration
+    if (booking.handoverOtpExpiresAt && new Date() > new Date(booking.handoverOtpExpiresAt)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Handover OTP has expired. Please regenerate a new 6-digit code.'
+      });
+    }
+
+    // OTP Validated: Transition trip state to IN_PROGRESS and start timer
+    booking.tripStatus = 'IN_PROGRESS';
+    booking.actualStartTime = new Date();
+    booking.paymentStatus = 'escrow_locked';
+    booking.handoverOtp = undefined;
+    booking.handoverOtpExpiresAt = undefined;
+
+    // Update vehicle status
+    if (booking.vehicle) {
+      await Vehicle.findByIdAndUpdate(booking.vehicle._id || booking.vehicle, {
+        status: 'rented'
+      });
+    }
+
+    await booking.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Vehicle Handover Verified! Live trip started.',
+      actualStartTime: booking.actualStartTime,
+      tripStatus: booking.tripStatus,
+      booking
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @desc    Complete trip, stop timer, and settle booking
+ * @route   POST /api/v1/bookings/:id/complete-trip
+ * @access  Private (Host, Renter, Admin)
+ */
+export const completeTrip = async (req, res, next) => {
+  try {
+    const booking = await Booking.findById(req.params.id).populate('vehicle');
+
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: 'Booking not found.'
+      });
+    }
+
+    booking.tripStatus = 'COMPLETED';
+    booking.actualEndTime = new Date();
+    booking.paymentStatus = 'settled';
+
+    if (booking.vehicle) {
+      await Vehicle.findByIdAndUpdate(booking.vehicle._id || booking.vehicle, {
+        status: 'available'
+      });
+    }
+
+    await booking.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Trip completed successfully! Escrow settled.',
+      actualEndTime: booking.actualEndTime,
+      tripStatus: booking.tripStatus,
+      booking
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+/**
+ * @desc    Update vehicle real-time GPS telemetry location during active trip
+ * @route   PATCH /api/v1/bookings/:id/location
+ * @access  Private
+ */
+export const updateTripLocation = async (req, res, next) => {
+  try {
+    const { lat, lng } = req.body;
+
+    if (lat === undefined || lng === undefined) {
+      return res.status(400).json({
+        success: false,
+        message: 'Latitude and Longitude are required.'
+      });
+    }
+
+    const booking = await Booking.findByIdAndUpdate(
+      req.params.id,
+      {
+        vehicleLastKnownLocation: {
+          lat: Number(lat),
+          lng: Number(lng),
+          updatedAt: new Date()
+        }
+      },
+      { new: true }
+    );
+
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: 'Booking not found.'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      location: booking.vehicleLastKnownLocation
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+

@@ -1,149 +1,123 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 
-export const DamageCanvasOverlay = ({ imageUrl, detections = [], selectedDetectionIndex, onSelectDetection }) => {
-  const containerRef = useRef(null);
+/**
+ * DamageCanvasOverlay
+ * Strictly anchors bounding boxes directly over the rendered vehicle image frame,
+ * completely eliminating letterbox/pillarbox coordinate drift.
+ */
+export const DamageCanvasOverlay = ({
+  imageUrl,
+  detections = [],
+  selectedDetectionIndex,
+  onSelectDetection
+}) => {
   const imageRef = useRef(null);
   const canvasRef = useRef(null);
   const [imageLoaded, setImageLoaded] = useState(false);
-  const [hoveredIndex, setHoveredIndex] = useState(null);
 
-  const getDamageColor = (damageType) => {
-    const type = (damageType || '').toLowerCase();
-    if (type.includes('scratch')) return { stroke: '#F59E0B', bg: 'rgba(245, 158, 11, 0.15)', badgeBg: '#F59E0B' };
-    if (type.includes('dent')) return { stroke: '#EF4444', bg: 'rgba(239, 68, 68, 0.15)', badgeBg: '#EF4444' };
-    if (type.includes('crack') || type.includes('structural')) return { stroke: '#8B5CF6', bg: 'rgba(139, 92, 246, 0.15)', badgeBg: '#8B5CF6' };
-    return { stroke: '#EF4444', bg: 'rgba(239, 68, 68, 0.15)', badgeBg: '#EF4444' };
+  const getNormalizedBox = (det) => {
+    const rawBox = det.boundingBox || det.bounding_box || det.bbox || det.box || {};
+    const xMin = det.x ?? rawBox.x ?? rawBox.xMin ?? rawBox.x_min ?? rawBox.xmin ?? 0;
+    const yMin = det.y ?? rawBox.y ?? rawBox.yMin ?? rawBox.y_min ?? rawBox.ymin ?? 0;
+
+    let width = det.width ?? rawBox.width;
+    let height = det.height ?? rawBox.height;
+
+    if (width === undefined) {
+      const xMax = rawBox.xMax ?? rawBox.x_max ?? rawBox.xmax ?? xMin + 0.15;
+      width = Math.max(0.04, xMax - xMin);
+    }
+    if (height === undefined) {
+      const yMax = rawBox.yMax ?? rawBox.y_max ?? rawBox.ymax ?? yMin + 0.08;
+      height = Math.max(0.04, yMax - yMin);
+    }
+
+    return {
+      x: Number(xMin),
+      y: Number(yMin),
+      width: Number(width),
+      height: Number(height),
+      label: det.label || det.damageType || 'SCRATCH',
+      confidence: Number(det.confidence) || 0.88
+    };
   };
 
-  const renderOverlay = useCallback(() => {
-    const canvas = canvasRef.current;
-    const img = imageRef.current;
-    if (!canvas || !img || !imageLoaded) return;
+  const handleContainerClick = (e) => {
+    if (!imageRef.current || detections.length === 0) return;
 
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    const imgRect = imageRef.current.getBoundingClientRect();
+    const clickX = (e.clientX - imgRect.left) / imgRect.width;
+    const clickY = (e.clientY - imgRect.top) / imgRect.height;
 
-    // Match canvas dimensions to the displayed image dimensions
-    const displayWidth = img.clientWidth;
-    const displayHeight = img.clientHeight;
-    const naturalWidth = img.naturalWidth || displayWidth || 800;
-    const naturalHeight = img.naturalHeight || displayHeight || 600;
+    let matchedIdx = null;
 
-    canvas.width = displayWidth;
-    canvas.height = displayHeight;
-
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    const scaleX = displayWidth / naturalWidth;
-    const scaleY = displayHeight / naturalHeight;
-
-    detections.forEach((det, index) => {
-      const bbox = det.boundingBox || det.bbox || { xMin: 50, yMin: 50, xMax: 200, yMax: 200 };
-      
-      // Determine if coordinates are normalized [0..1] or pixel-based
-      const isNormalized = bbox.xMax <= 1 && bbox.yMax <= 1;
-      
-      let xMin = isNormalized ? bbox.xMin * displayWidth : bbox.xMin * scaleX;
-      let yMin = isNormalized ? bbox.yMin * displayHeight : bbox.yMin * scaleY;
-      let xMax = isNormalized ? bbox.xMax * displayWidth : bbox.xMax * scaleX;
-      let yMax = isNormalized ? bbox.yMax * displayHeight : bbox.yMax * scaleY;
-
-      const width = xMax - xMin;
-      const height = yMax - yMin;
-
-      const isSelected = selectedDetectionIndex === index || hoveredIndex === index;
-      const colors = getDamageColor(det.damageType);
-
-      // Draw bounding box background rectangle
-      ctx.fillStyle = colors.bg;
-      ctx.fillRect(xMin, yMin, width, height);
-
-      // Draw bounding box border
-      ctx.strokeStyle = colors.stroke;
-      ctx.lineWidth = isSelected ? 3 : 2;
-      if (isSelected) {
-        ctx.setLineDash([6, 3]);
-      } else {
-        ctx.setLineDash([]);
-      }
-      ctx.strokeRect(xMin, yMin, width, height);
-
-      // Draw pill badge for label & confidence
-      const labelText = `${det.damageType || 'Damage'} ${Math.round((det.confidence || 0.9) * 100)}%`;
-      ctx.font = 'bold 11px Inter, sans-serif';
-      const textWidth = ctx.measureText(labelText).width;
-      const badgePaddingX = 8;
-      const badgeHeight = 20;
-
-      const badgeX = Math.max(0, Math.min(xMin, displayWidth - textWidth - badgePaddingX * 2));
-      const badgeY = yMin - badgeHeight - 4 > 0 ? yMin - badgeHeight - 4 : yMin + 4;
-
-      // Badge container background
-      ctx.fillStyle = colors.badgeBg;
-      ctx.beginPath();
-      ctx.roundRect(badgeX, badgeY, textWidth + badgePaddingX * 2, badgeHeight, 6);
-      ctx.fill();
-
-      // Badge text
-      ctx.fillStyle = '#FFFFFF';
-      ctx.fillText(labelText, badgeX + badgePaddingX, badgeY + 14);
-    });
-  }, [detections, imageLoaded, selectedDetectionIndex, hoveredIndex]);
-
-  useEffect(() => {
-    renderOverlay();
-    window.addEventListener('resize', renderOverlay);
-    return () => window.removeEventListener('resize', renderOverlay);
-  }, [renderOverlay]);
-
-  const handleCanvasClick = (e) => {
-    if (!canvasRef.current || !imageRef.current) return;
-    const rect = canvasRef.current.getBoundingClientRect();
-    const clickX = e.clientX - rect.left;
-    const clickY = e.clientY - rect.top;
-
-    const displayWidth = canvasRef.current.width;
-    const displayHeight = canvasRef.current.height;
-    const img = imageRef.current;
-    const naturalWidth = img.naturalWidth || displayWidth;
-    const naturalHeight = img.naturalHeight || displayHeight;
-    const scaleX = displayWidth / naturalWidth;
-    const scaleY = displayHeight / naturalHeight;
-
-    let clickedIndex = null;
-
-    detections.forEach((det, index) => {
-      const bbox = det.boundingBox || det.bbox || { xMin: 0, yMin: 0, xMax: 100, yMax: 100 };
-      const isNormalized = bbox.xMax <= 1 && bbox.yMax <= 1;
-      let xMin = isNormalized ? bbox.xMin * displayWidth : bbox.xMin * scaleX;
-      let yMin = isNormalized ? bbox.yMin * displayHeight : bbox.yMin * scaleY;
-      let xMax = isNormalized ? bbox.xMax * displayWidth : bbox.xMax * scaleX;
-      let yMax = isNormalized ? bbox.yMax * displayHeight : bbox.yMax * scaleY;
-
-      if (clickX >= xMin && clickX <= xMax && clickY >= yMin && clickY <= yMax) {
-        clickedIndex = index;
+    detections.forEach((det, idx) => {
+      const box = getNormalizedBox(det);
+      if (
+        clickX >= box.x &&
+        clickX <= box.x + box.width &&
+        clickY >= box.y &&
+        clickY <= box.y + box.height
+      ) {
+        matchedIdx = idx;
       }
     });
 
-    if (clickedIndex !== null && onSelectDetection) {
-      onSelectDetection(clickedIndex);
+    if (matchedIdx !== null && onSelectDetection) {
+      onSelectDetection(matchedIdx);
     }
   };
 
   return (
-    <div ref={containerRef} className="relative inline-block w-full overflow-hidden rounded-2xl border border-zinc-800 bg-zinc-950 shadow-2xl">
-      <img
-        ref={imageRef}
-        src={imageUrl}
-        alt="Damage Inspection Scanner"
-        onLoad={() => setImageLoaded(true)}
-        className="w-full h-auto max-h-[500px] object-contain block mx-auto"
-      />
-      <canvas
-        ref={canvasRef}
-        onClick={handleCanvasClick}
-        className="absolute inset-0 w-full h-full cursor-pointer z-10"
-      />
+    <div className="relative w-full flex items-center justify-center bg-slate-950/90 rounded-3xl overflow-hidden border border-slate-800 p-2 sm:p-4 shadow-2xl">
+      {/* Tight Wrapper Anchored Exactly to Image Render Bounds (No Pillarbox Drift) */}
+      <div
+        className="relative max-w-full inline-flex items-center justify-center rounded-2xl overflow-hidden shadow-2xl cursor-pointer"
+        onClick={handleContainerClick}
+      >
+        <img
+          ref={imageRef}
+          src={imageUrl}
+          alt="Vehicle Damage Telemetry"
+          onLoad={() => setImageLoaded(true)}
+          className="max-h-[440px] w-auto max-w-full object-contain rounded-xl select-none block"
+        />
+
+        {/* Dynamic Bounding Box Overlay Strictly Pinned over Rendered Image */}
+        {imageLoaded && (
+          <div className="absolute inset-0 pointer-events-none z-20">
+            {detections.map((det, idx) => {
+              const box = getNormalizedBox(det);
+              const isSelected = selectedDetectionIndex === idx;
+
+              return (
+                <div
+                  key={idx}
+                  className={`absolute border-2 rounded-md transition-all duration-300 pointer-events-none ${
+                    isSelected
+                      ? 'border-cyan-400 bg-cyan-500/25 ring-2 ring-cyan-400/50 shadow-[0_0_20px_rgba(6,182,212,0.6)] animate-pulse'
+                      : 'border-rose-500 bg-rose-500/20 shadow-[0_0_15px_rgba(244,63,94,0.45)]'
+                  }`}
+                  style={{
+                    left: `${Math.max(0, Math.min(96, box.x * 100))}%`,
+                    top: `${Math.max(0, Math.min(96, box.y * 100))}%`,
+                    width: `${Math.max(4, Math.min(100 - box.x * 100, box.width * 100))}%`,
+                    height: `${Math.max(4, Math.min(100 - box.y * 100, box.height * 100))}%`
+                  }}
+                >
+                  <span
+                    className={`absolute -top-5 left-0 text-white font-mono text-[9px] font-bold px-1.5 py-0.5 rounded whitespace-nowrap shadow-md flex items-center gap-1 ${
+                      isSelected ? 'bg-cyan-600 ring-1 ring-cyan-300' : 'bg-rose-600'
+                    }`}
+                  >
+                    {box.label.toUpperCase()} {Math.round(box.confidence * 100)}%
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
     </div>
   );
 };

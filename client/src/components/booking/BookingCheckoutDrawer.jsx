@@ -5,6 +5,7 @@ import Button from '../common/Button';
 import Input from '../common/Input';
 import { useAuth } from '../../context/AuthContext';
 import { createBooking } from '../../services/bookingService';
+import TripHandoverModal from './TripHandoverModal';
 
 export const BookingCheckoutDrawer = ({ isOpen, onClose, vehicle }) => {
   const { user, token, kycStatus, openAuthModal } = useAuth();
@@ -50,7 +51,7 @@ export const BookingCheckoutDrawer = ({ isOpen, onClose, vehicle }) => {
     setError('');
 
     try {
-      await createBooking(
+      const res = await createBooking(
         {
           vehicleId: vehicle._id || vehicle.id,
           startDate: new Date(startDate).toISOString(),
@@ -61,51 +62,67 @@ export const BookingCheckoutDrawer = ({ isOpen, onClose, vehicle }) => {
 
       setIsLoading(false);
       setBookingSuccess(true);
+      if (res.data) {
+        setCreatedBooking(res.data);
+      }
     } catch (err) {
       setIsLoading(false);
       setError(err.message || 'Failed to submit booking request. Please check vehicle availability.');
     }
   };
 
+  const [createdBooking, setCreatedBooking] = useState(null);
+  const [isHandoverOpen, setIsHandoverOpen] = useState(false);
+
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={onClose}
-      title={bookingSuccess ? 'Booking Confirmed!' : `Reserve ${vehicle.title}`}
-      maxWidth="max-w-lg"
-    >
-      {bookingSuccess ? (
-        <div className="flex flex-col items-center text-center gap-4 py-4 animate-in zoom-in-95 duration-200">
-          <div className="w-16 h-16 rounded-2xl bg-emerald-950/80 border border-emerald-500/30 text-emerald-400 flex items-center justify-center shadow-[0_0_25px_rgba(16,185,129,0.3)]">
-            <CheckCircle2 className="w-9 h-9" />
-          </div>
-          <div>
-            <h3 className="text-xl font-bold text-zinc-100">Trip Requested Successfully!</h3>
-            <p className="text-xs text-zinc-400 mt-1 max-w-sm">
-              Your payment of <span className="font-bold text-zinc-100 font-mono">₹{totalPayable}</span> is locked securely in Escrow until host approves key handover.
-            </p>
-          </div>
+    <>
+      <Modal
+        isOpen={isOpen}
+        onClose={onClose}
+        title={bookingSuccess ? 'Booking Confirmed!' : `Reserve ${vehicle.title}`}
+        maxWidth="max-w-lg"
+      >
+        {bookingSuccess ? (
+          <div className="flex flex-col items-center text-center gap-4 py-4 animate-in zoom-in-95 duration-200">
+            <div className="w-16 h-16 rounded-2xl bg-emerald-950/80 border border-emerald-500/30 text-emerald-400 flex items-center justify-center shadow-[0_0_25px_rgba(16,185,129,0.3)]">
+              <CheckCircle2 className="w-9 h-9" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-zinc-100">Trip Reserved Successfully!</h3>
+              <p className="text-xs text-zinc-400 mt-1 max-w-sm">
+                Your payment of <span className="font-bold text-zinc-100 font-mono">₹{totalPayable}</span> is locked securely in Escrow.
+              </p>
+            </div>
 
-          <div className="w-full bg-zinc-900/60 border border-zinc-800 rounded-2xl p-4 text-left text-xs space-y-2.5">
-            <div className="flex justify-between text-zinc-400">
-              <span>Vehicle:</span>
-              <span className="font-bold text-zinc-100">{vehicle.title}</span>
+            <div className="w-full bg-zinc-900/60 border border-zinc-800 rounded-2xl p-4 text-left text-xs space-y-2.5">
+              <div className="flex justify-between text-zinc-400">
+                <span>Vehicle:</span>
+                <span className="font-bold text-zinc-100">{vehicle.title}</span>
+              </div>
+              <div className="flex justify-between text-zinc-400">
+                <span>Pickup Window:</span>
+                <span className="font-semibold text-zinc-200">{new Date(startDate).toLocaleString()}</span>
+              </div>
+              <div className="flex justify-between text-zinc-400">
+                <span>Dropoff Window:</span>
+                <span className="font-semibold text-zinc-200">{new Date(endDate).toLocaleString()}</span>
+              </div>
             </div>
-            <div className="flex justify-between text-zinc-400">
-              <span>Pickup Window:</span>
-              <span className="font-semibold text-zinc-200">{new Date(startDate).toLocaleString()}</span>
-            </div>
-            <div className="flex justify-between text-zinc-400">
-              <span>Dropoff Window:</span>
-              <span className="font-semibold text-zinc-200">{new Date(endDate).toLocaleString()}</span>
+
+            <div className="w-full space-y-2 pt-2">
+              <Button
+                variant="primary"
+                onClick={() => setIsHandoverOpen(true)}
+                className="w-full py-3 font-bold bg-cyan-600 hover:bg-cyan-500 shadow-lg shadow-cyan-950/40"
+              >
+                View 6-Digit Handover Code & Trip HUD
+              </Button>
+              <Button variant="outline" onClick={onClose} className="w-full py-2.5 border-zinc-800">
+                Done & Return to Fleet
+              </Button>
             </div>
           </div>
-
-          <Button variant="primary" onClick={onClose} className="w-full py-3">
-            Done & Return to Fleet
-          </Button>
-        </div>
-      ) : (
+        ) : (
         <div className="space-y-5">
           {/* Vehicle Snapshot Header */}
           <div className="flex items-center gap-4 bg-zinc-900/60 p-3.5 rounded-2xl border border-zinc-800">
@@ -217,6 +234,16 @@ export const BookingCheckoutDrawer = ({ isOpen, onClose, vehicle }) => {
         </div>
       )}
     </Modal>
+
+    {createdBooking && (
+      <TripHandoverModal
+        isOpen={isHandoverOpen}
+        onClose={() => setIsHandoverOpen(false)}
+        booking={createdBooking}
+        isHost={false}
+      />
+    )}
+  </>
   );
 };
 
