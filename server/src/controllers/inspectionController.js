@@ -123,6 +123,8 @@ const formatDetections = (rawDetections = []) => {
     });
 };
 
+const getGeminiApiKey = () => process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+
 /**
  * @desc    Universal Multi-Vehicle AI Damage Inspection Engine (Cars, Bikes, SUVs) using Gemini Vision API
  * @route   POST /api/v1/inspections/analyze-universal or /api/damage/analyze-universal
@@ -133,11 +135,12 @@ export const analyzeUniversalVehicleDamage = async (req, res) => {
     const { preImageUrl, postImageUrl, vehicleType = 'car' } = req.body;
 
     if (!preImageUrl || !postImageUrl) {
-      return res.status(400).json({ error: 'Both Pre-Trip and Post-Trip images required.' });
+      return res.status(400).json({ success: false, error: 'Both Pre-Trip and Post-Trip images required.', totalDetections: 0, newDetections: 0, boxes: [], detections: [] });
     }
 
     if (preImageUrl === postImageUrl) {
       return res.json({
+        success: true,
         totalDetections: 0,
         newDetections: 0,
         boxes: [],
@@ -150,10 +153,12 @@ export const analyzeUniversalVehicleDamage = async (req, res) => {
       });
     }
 
+    const apiKey = getGeminiApiKey();
+
     // Initialize Gemini AI Client if API key is provided
-    if (GEMINI_API_KEY) {
+    if (apiKey) {
       try {
-        const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY });
+        const ai = new GoogleGenAI({ apiKey });
 
         const [prePart, postPart] = await Promise.all([
           imageToGenerativePart(preImageUrl),
@@ -188,58 +193,75 @@ CORE VERIFICATION PROTOCOL:
    - If damage confirmed: Return exact tight coordinates [ymin, xmin, ymax, xmax] (0 to 1000) only for the physical scratch itself.
 `;
 
-        const response = await ai.models.generateContent({
-          model: 'gemini-3.6-flash',
-          contents: [
-            {
-              role: 'user',
-              parts: [
-                { text: prompt },
-                { text: 'Image 1 (Pre-Trip Baseline):' },
-                prePart,
-                { text: 'Image 2 (Post-Trip Return):' },
-                postPart
-              ]
-            }
-          ],
-          config: {
-            responseMimeType: 'application/json',
-            responseSchema: {
-              type: Type.OBJECT,
-              properties: {
-                isAuthentic: { type: Type.BOOLEAN },
-                fraudRisk: { type: Type.STRING, enum: ['LOW', 'MEDIUM', 'HIGH'] },
-                fraudReason: { type: Type.STRING },
-                status: { type: Type.STRING, enum: ['PRISTINE', 'DAMAGED', 'FRAUD_SUSPECTED'] },
-                totalDetections: { type: Type.INTEGER },
-                newDetections: { type: Type.INTEGER },
-                summary: { type: Type.STRING },
-                boxes: {
-                  type: Type.ARRAY,
-                  items: {
-                    type: Type.OBJECT,
-                    properties: {
-                      label: { type: Type.STRING },
-                      confidence: { type: Type.NUMBER },
-                      box_2d: {
-                        type: Type.ARRAY,
-                        items: { type: Type.INTEGER },
-                        description: '[ymin, xmin, ymax, xmax] 0-1000'
-                      }
-                    },
-                    required: ['label', 'confidence', 'box_2d']
+        const responseSchema = {
+          type: Type.OBJECT,
+          properties: {
+            isAuthentic: { type: Type.BOOLEAN },
+            fraudRisk: { type: Type.STRING, enum: ['LOW', 'MEDIUM', 'HIGH'] },
+            fraudReason: { type: Type.STRING },
+            status: { type: Type.STRING, enum: ['PRISTINE', 'DAMAGED', 'FRAUD_SUSPECTED'] },
+            totalDetections: { type: Type.INTEGER },
+            newDetections: { type: Type.INTEGER },
+            summary: { type: Type.STRING },
+            boxes: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  label: { type: Type.STRING },
+                  confidence: { type: Type.NUMBER },
+                  box_2d: {
+                    type: Type.ARRAY,
+                    items: { type: Type.INTEGER },
+                    description: '[ymin, xmin, ymax, xmax] 0-1000'
                   }
+                },
+                required: ['label', 'confidence', 'box_2d']
+              }
+            }
+          },
+          required: ['isAuthentic', 'fraudRisk', 'status', 'totalDetections', 'newDetections', 'boxes']
+        };
+
+        const generateWithFallback = async () => {
+          const modelsToTry = ['gemini-1.5-flash', 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-3.6-flash'];
+          let lastErr = null;
+
+          for (const modelName of modelsToTry) {
+            try {
+              const res = await ai.models.generateContent({
+                model: modelName,
+                contents: [
+                  {
+                    role: 'user',
+                    parts: [
+                      { text: prompt },
+                      { text: 'Image 1 (Pre-Trip Baseline):' },
+                      prePart,
+                      { text: 'Image 2 (Post-Trip Return):' },
+                      postPart
+                    ]
+                  }
+                ],
+                config: {
+                  responseMimeType: 'application/json',
+                  responseSchema
                 }
-              },
-              required: ['isAuthentic', 'fraudRisk', 'status', 'totalDetections', 'newDetections', 'boxes']
+              });
+              return res;
+            } catch (mErr) {
+              lastErr = mErr;
             }
           }
-        });
+          throw lastErr;
+        };
 
+        const response = await generateWithFallback();
         const data = JSON.parse(response.text);
 
         if (data.fraudRisk === 'HIGH') {
           return res.json({
+            success: true,
             isAuthentic: false,
             fraudRisk: 'HIGH',
             fraudReason: data.fraudReason || 'Synthetic image manipulation detected',
@@ -255,6 +277,7 @@ CORE VERIFICATION PROTOCOL:
 
         if (data.status === 'PRISTINE' || !data.boxes || data.boxes.length === 0) {
           return res.json({
+            success: true,
             isAuthentic: data.isAuthentic ?? true,
             fraudRisk: data.fraudRisk || 'LOW',
             status: 'PRISTINE',
@@ -310,6 +333,7 @@ CORE VERIFICATION PROTOCOL:
         const severity = formattedBoxes.length >= 2 ? 'High' : formattedBoxes.length === 1 ? 'Moderate' : 'None';
 
         return res.json({
+          success: true,
           isAuthentic: data.isAuthentic ?? true,
           fraudRisk: data.fraudRisk || 'LOW',
           status,
@@ -325,12 +349,26 @@ CORE VERIFICATION PROTOCOL:
               : 'Vehicle pristine - Clean baseline match. No new damage detected.')
         });
       } catch (geminiError) {
-        console.warn('[Gemini Vision AI Notice]:', geminiError.message);
+        console.error('[Gemini Vision Error]:', geminiError);
+        return res.json({
+          success: false,
+          message: geminiError.message,
+          isAuthentic: true,
+          fraudRisk: 'LOW',
+          totalDetections: 0,
+          newDetections: 0,
+          boxes: [],
+          detections: [],
+          status: 'PRISTINE',
+          severity: 'None',
+          summaryMessage: `AI Telemetry Notice: ${geminiError.message}`
+        });
       }
     }
 
-    // Default clean response if API key is not configured or fails
+    // Default clean response if API key is not configured
     return res.json({
+      success: true,
       isAuthentic: true,
       fraudRisk: 'LOW',
       totalDetections: 0,
@@ -342,8 +380,10 @@ CORE VERIFICATION PROTOCOL:
       summaryMessage: 'Vehicle pristine - Clean baseline match. No new damage detected.'
     });
   } catch (error) {
-    console.error('Universal Damage AI Error:', error.message);
+    console.error('[Gemini Vision Error]:', error);
     return res.json({
+      success: false,
+      message: error.message,
       isAuthentic: true,
       fraudRisk: 'LOW',
       totalDetections: 0,
