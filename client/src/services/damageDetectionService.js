@@ -1,6 +1,14 @@
 import axios from 'axios';
 
-const API_BASE = '/api/v1/inspections';
+const RAW_API_URL =
+  import.meta.env.VITE_API_URL ||
+  import.meta.env.VITE_API_BASE_URL ||
+  (typeof window !== 'undefined' && window.location.origin.includes('vercel.app')
+    ? 'https://primedrew-api.onrender.com'
+    : '');
+
+const API_BASE_URL = RAW_API_URL.replace(/\/+$/, '');
+const API_BASE = API_BASE_URL ? `${API_BASE_URL}/api/v1/inspections` : '/api/v1/inspections';
 
 /**
  * Converts blob: URLs or File references to Base64 Data URLs for backend AI consumption
@@ -49,15 +57,30 @@ export const analyzeVehicleDamageAI = async (preImageUrl, postImageUrl, vehicleT
       ensureDataUrl(postImageUrl)
     ]);
 
-    // 2. Call Universal Gemini Vision API on Backend
-    const response = await axios.post(`${API_BASE}/analyze-universal`, {
+    const payload = {
       preImageUrl: cleanPre,
       postImageUrl: cleanPost,
       vehicleType
-    }, {
-      headers: { 'Content-Type': 'application/json' },
-      timeout: 120000
-    });
+    };
+
+    // 2. Call Universal Gemini Vision API on Backend using explicit POST
+    let response;
+    try {
+      response = await axios.post(`${API_BASE}/analyze-damage`, payload, {
+        headers: { 'Content-Type': 'application/json' },
+        timeout: 120000
+      });
+    } catch (endpointErr) {
+      if (endpointErr?.response?.status === 404 || endpointErr?.response?.status === 405) {
+        // Fallback to /analyze-universal
+        response = await axios.post(`${API_BASE}/analyze-universal`, payload, {
+          headers: { 'Content-Type': 'application/json' },
+          timeout: 120000
+        });
+      } else {
+        throw endpointErr;
+      }
+    }
 
     if (response?.data && Array.isArray(response.data.boxes)) {
       const boxes = response.data.boxes.map((b) => ({

@@ -17,6 +17,8 @@ const handleUpload = (req, res, next) => {
 };
 
 router.post('/detect-damage', optionalAuth, handleUpload, processVehicleInspection);
+router.post('/analyze-damage', optionalAuth, analyzeUniversalVehicleDamage);
 router.post('/analyze-universal', optionalAuth, analyzeUniversalVehicleDamage);
+router.post('/analyze', optionalAuth, analyzeUniversalVehicleDamage);
 
 export default router;
