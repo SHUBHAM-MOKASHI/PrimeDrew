@@ -10,6 +10,7 @@ import bookingRoutes from './routes/bookingRoutes.js';
 import inspectionRoutes from './routes/inspectionRoutes.js';
 import kycRoutes from './routes/kycRoutes.js';
 import userRoutes from './routes/userRoutes.js';
+import hostRoutes from './routes/hostRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 
@@ -77,6 +78,8 @@ app.use('/api/damage', inspectionRoutes);
 app.use('/api/v1/damage', inspectionRoutes);
 app.use('/api/v1/kyc', kycRoutes);
 app.use('/api/v1/users', userRoutes);
+app.use('/api/v1/hosts', hostRoutes);
+app.use('/api/hosts', hostRoutes);
 app.use('/api/v1/admin', adminRoutes);
 
 // 404 Handler

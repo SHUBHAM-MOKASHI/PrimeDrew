@@ -8,6 +8,8 @@ router.patch('/kyc-status', protect, updateKycStatus);
 router.post('/kyc-status', protect, updateKycStatus);
 
 router.post('/apply-host', protect, applyHostApplication);
+router.post('/apply', protect, applyHostApplication);
 router.get('/host-status', protect, getHostApplicationStatus);
+router.get('/status', protect, getHostApplicationStatus);
 
 export default router;

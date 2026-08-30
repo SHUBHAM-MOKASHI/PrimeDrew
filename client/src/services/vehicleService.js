@@ -1,6 +1,14 @@
 import axios from 'axios';
 
-const API_BASE = '/api/v1/vehicles';
+const RAW_API_URL =
+  import.meta.env.VITE_API_URL ||
+  import.meta.env.VITE_API_BASE_URL ||
+  (typeof window !== 'undefined' && window.location.origin.includes('vercel.app')
+    ? 'https://primedrew-api.onrender.com'
+    : '');
+
+export const API_BASE_URL = RAW_API_URL.replace(/\/+$/, '');
+const API_BASE = `${API_BASE_URL}/api/v1/vehicles`;
 
 export const getVehicles = async (params = {}) => {
   try {

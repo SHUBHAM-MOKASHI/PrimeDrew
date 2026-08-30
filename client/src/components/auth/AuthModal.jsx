@@ -78,25 +78,19 @@ export const AuthModal = () => {
     setError('');
 
     try {
-      let res = await fetch('http://localhost:5000/api/v1/auth/verify-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          phone: phoneNumber.trim(),
-          role: authModalTab === 'host' ? 'host' : 'renter'
-        })
-      }).catch(() => null);
+      const RAW_API_URL =
+        import.meta.env.VITE_API_URL ||
+        import.meta.env.VITE_API_BASE_URL ||
+        (typeof window !== 'undefined' && window.location.origin.includes('vercel.app')
+          ? 'https://primedrew-api.onrender.com'
+          : '');
+      const API_BASE_URL = RAW_API_URL.replace(/\/+$/, '');
 
-      let data;
-      if (res && res.ok) {
-        data = await res.json();
-      } else {
-        const response = await axios.post('/api/v1/auth/verify-otp', {
-          phone: phoneNumber.trim(),
-          role: authModalTab === 'host' ? 'host' : 'renter'
-        });
-        data = response.data;
-      }
+      const response = await axios.post(`${API_BASE_URL}/api/v1/auth/verify-otp`, {
+        phone: phoneNumber.trim(),
+        role: authModalTab === 'host' ? 'host' : 'renter'
+      });
+      const data = response.data;
 
       if (data && data.user && data.token) {
         login(data.user, data.token);
@@ -118,8 +112,16 @@ export const AuthModal = () => {
   const handleGoogleLogin = async () => {
     setIsLoading(true);
     try {
+      const RAW_API_URL =
+        import.meta.env.VITE_API_URL ||
+        import.meta.env.VITE_API_BASE_URL ||
+        (typeof window !== 'undefined' && window.location.origin.includes('vercel.app')
+          ? 'https://primedrew-api.onrender.com'
+          : '');
+      const API_BASE_URL = RAW_API_URL.replace(/\/+$/, '');
+
       const mockPhone = '9876543210';
-      const response = await axios.post('/api/v1/auth/verify-otp', {
+      const response = await axios.post(`${API_BASE_URL}/api/v1/auth/verify-otp`, {
         phone: mockPhone,
         role: authModalTab === 'host' ? 'host' : 'renter'
       });

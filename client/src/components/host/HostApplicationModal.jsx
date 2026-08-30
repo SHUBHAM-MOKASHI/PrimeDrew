@@ -52,16 +52,43 @@ export const HostApplicationModal = ({ isOpen, onClose }) => {
     }
 
     try {
-      const authToken = token || localStorage.getItem('token') || localStorage.getItem('primedrew_token');
-      const response = await axios.post(
-        '/api/v1/users/apply-host',
-        formData,
-        {
-          headers: {
-            Authorization: authToken ? `Bearer ${authToken}` : ''
+      const RAW_API_URL =
+        import.meta.env.VITE_API_URL ||
+        import.meta.env.VITE_API_BASE_URL ||
+        (typeof window !== 'undefined' && window.location.origin.includes('vercel.app')
+          ? 'https://primedrew-api.onrender.com'
+          : '');
+      const API_BASE_URL = RAW_API_URL.replace(/\/+$/, '');
+      const authToken = token || localStorage.getItem('token') || localStorage.getItem('primedrew_token') || '';
+
+      let response;
+      try {
+        response = await axios.post(
+          `${API_BASE_URL}/api/v1/hosts/apply`,
+          formData,
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: authToken ? `Bearer ${authToken}` : ''
+            }
           }
+        );
+      } catch (endpointErr) {
+        if (endpointErr?.response?.status === 404 || endpointErr?.response?.status === 405) {
+          response = await axios.post(
+            `${API_BASE_URL}/api/v1/users/apply-host`,
+            formData,
+            {
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: authToken ? `Bearer ${authToken}` : ''
+              }
+            }
+          );
+        } else {
+          throw endpointErr;
         }
-      );
+      }
 
       if (response.data && response.data.user) {
         updateUser(response.data.user);
