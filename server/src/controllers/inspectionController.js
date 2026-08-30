@@ -81,44 +81,85 @@ const formatDetections = (rawDetections = []) => {
 
   return rawDetections
     .filter((d) => {
-      const rawType = (d.damage_type || d.damageType || '').toLowerCase().trim();
+      const rawType = (d.damage_type || d.damageType || d.label || '').toLowerCase().trim();
       
       // 1. Discard generic COCO objects / vehicles / persons
       if (GENERIC_OBJECT_BLACKLIST.has(rawType)) {
         return false;
       }
 
-      // 2. Discard full-frame bounding boxes (> 50% image area)
-      const rawBox = d.bounding_box || d.boundingBox || d.bbox || {};
-      const xMin = rawBox.x_min ?? rawBox.xMin ?? rawBox.xmin ?? 0;
-      const yMin = rawBox.y_min ?? rawBox.yMin ?? rawBox.ymin ?? 0;
-      const xMax = rawBox.x_max ?? rawBox.xMax ?? rawBox.xmax ?? 0;
-      const yMax = rawBox.y_max ?? rawBox.yMax ?? rawBox.ymax ?? 0;
+      // 2. Normalize bounding box coordinates to 0.0 - 1.0 before area validation
+      const rawBox = d.bounding_box || d.boundingBox || d.bbox || d.box_2d || {};
+      let xmin = rawBox.x_min ?? rawBox.xMin ?? rawBox.xmin ?? rawBox[1] ?? 0;
+      let ymin = rawBox.y_min ?? rawBox.yMin ?? rawBox.ymin ?? rawBox[0] ?? 0;
+      let xmax = rawBox.x_max ?? rawBox.xMax ?? rawBox.xmax ?? rawBox[3] ?? 0;
+      let ymax = rawBox.y_max ?? rawBox.yMax ?? rawBox.ymax ?? rawBox[2] ?? 0;
 
-      const area = Math.abs(xMax - xMin) * Math.abs(yMax - yMin);
-      if (area > 0.50) {
+      // Convert 0-1000 scale coordinates to normalized 0.0 - 1.0
+      if (xmax > 1.05 || ymax > 1.05 || xmin > 1.05 || ymin > 1.05) {
+        xmin /= 1000;
+        ymin /= 1000;
+        xmax /= 1000;
+        ymax /= 1000;
+      }
+
+      const width = Math.abs(xmax - xmin);
+      const height = Math.abs(ymax - ymin);
+      const area = width * height;
+
+      // Discard boxes where dimensions are inverted or area exceeds 0.50 (50% of image) or too small (< 0.001)
+      if (width <= 0 || height <= 0 || area > 0.50 || area < 0.001) {
+        return false;
+      }
+
+      const conf = d.confidence > 1 ? d.confidence / 100 : (d.confidence ?? 0.85);
+      if (conf < 0.80) {
         return false;
       }
 
       return true;
     })
     .map((d) => {
-      const rawBox = d.bounding_box || d.boundingBox || d.bbox || {};
-      const xMin = rawBox.x_min ?? rawBox.xMin ?? rawBox.xmin ?? 0.15;
-      const yMin = rawBox.y_min ?? rawBox.yMin ?? rawBox.ymin ?? 0.2;
-      const xMax = rawBox.x_max ?? rawBox.xMax ?? rawBox.xmax ?? 0.45;
-      const yMax = rawBox.y_max ?? rawBox.yMax ?? rawBox.ymax ?? 0.5;
+      const rawBox = d.bounding_box || d.boundingBox || d.bbox || d.box_2d || {};
+      let xmin = rawBox.x_min ?? rawBox.xMin ?? rawBox.xmin ?? rawBox[1] ?? 0.15;
+      let ymin = rawBox.y_min ?? rawBox.yMin ?? rawBox.ymin ?? rawBox[0] ?? 0.2;
+      let xmax = rawBox.x_max ?? rawBox.xMax ?? rawBox.xmax ?? rawBox[3] ?? 0.45;
+      let ymax = rawBox.y_max ?? rawBox.yMax ?? rawBox.ymax ?? rawBox[2] ?? 0.5;
 
-      const damageType = d.damage_type || d.damageType || 'scratch';
-      const confidence = Number(d.confidence || 0.85);
+      if (xmax > 1.05 || ymax > 1.05 || xmin > 1.05 || ymin > 1.05) {
+        xmin /= 1000;
+        ymin /= 1000;
+        xmax /= 1000;
+        ymax /= 1000;
+      }
+
+      const xMin = Number(Math.min(xmin, xmax).toFixed(3));
+      const yMin = Number(Math.min(ymin, ymax).toFixed(3));
+      const xMax = Number(Math.max(xmin, xmax).toFixed(3));
+      const yMax = Number(Math.max(ymin, ymax).toFixed(3));
+      const width = Number((xMax - xMin).toFixed(3));
+      const height = Number((yMax - yMin).toFixed(3));
+
+      const damageType = d.damage_type || d.damageType || d.label || 'scratch';
+      const conf = d.confidence > 1 ? d.confidence / 100 : (d.confidence ?? 0.85);
 
       return {
-        damageType,
-        damage_type: damageType,
-        confidence: Math.round(confidence * 100) / 100,
-        location: d.location || 'Exterior Surface Defect',
+        damageType: damageType.toLowerCase(),
+        damage_type: damageType.toLowerCase(),
+        label: damageType.toUpperCase(),
+        confidence: Number(conf.toFixed(2)),
+        location: yMin > 0.65 ? (xMin < 0.5 ? 'Lower Bumper Left' : 'Lower Bumper Right') : 'Exterior Panel',
+        x: xMin,
+        y: yMin,
+        width,
+        height,
+        xMin,
+        yMin,
+        xMax,
+        yMax,
         boundingBox: { xMin, yMin, xMax, yMax },
-        bounding_box: { x_min: xMin, y_min: yMin, x_max: xMax, y_max: yMax }
+        bounding_box: { x_min: xMin, y_min: yMin, x_max: xMax, y_max: yMax },
+        isNew: true
       };
     });
 };
@@ -135,7 +176,15 @@ export const analyzeUniversalVehicleDamage = async (req, res) => {
     const { preImageUrl, postImageUrl, vehicleType = 'car' } = req.body;
 
     if (!preImageUrl || !postImageUrl) {
-      return res.status(400).json({ success: false, error: 'Both Pre-Trip and Post-Trip images required.', totalDetections: 0, newDetections: 0, boxes: [], detections: [] });
+      return res.status(400).json({
+        success: false,
+        error: 'Both Pre-Trip and Post-Trip images required.',
+        status: 'INVALID_INPUT',
+        totalDetections: 0,
+        newDetections: 0,
+        boxes: [],
+        detections: []
+      });
     }
 
     if (preImageUrl === postImageUrl) {
@@ -166,31 +215,32 @@ export const analyzeUniversalVehicleDamage = async (req, res) => {
         ]);
 
         const prompt = `
-You are an expert Automotive Inspection & Claims AI.
+You are an expert Certified Automotive Insurance AI Damage and Forensics Evaluator.
 Input: Image 1 = Pre-Trip Baseline, Image 2 = Post-Trip Return.
 
 CORE VERIFICATION PROTOCOL:
-1. OEM COMPONENT RECOGNITION (CRITICAL):
-   - You MUST recognize factory components on this ${vehicleType}: Headlight clusters, LED DRL rings, fog lamp bezels, grilles, air intakes, wipers, badges, parking sensors, and door handles.
-   - DO NOT classify dark plastic surrounds, bulb reflections, or headlight lenses as scratches or paint defects.
-   - A headlight/light cluster is only damaged if the outer clear glass/lens is visibly SHATTERED or CRACKED.
-
-2. DIFFERENTIAL INTEGRITY CHECK:
+1. STRICT DIFFERENTIAL DAMAGE ISOLATION:
    - Compare Image 2 strictly against Image 1.
-   - If the paint surface, bumpers, and panels in Image 2 are in the same clean state as Image 1, you MUST return status: "PRISTINE", totalDetections: 0, newDetections: 0, and boxes: [].
-   - If Image 1 has the same factory headlight shape as Image 2, marking Image 2 as damaged is a SEVERE ERROR.
+   - Ignore surface dirt, dust, mud specks, water droplets, rain spots, reflections, and ambient lighting/shadow variations.
+   - Isolate ONLY structural paint gouges revealing undercoat/primer, deep metal dents, cracked bumper plastics, broken glass, or body panel tears present strictly in Image 2 but absent in Image 1.
+   - If Image 2 has no new physical structural damage compared to Image 1, you MUST return status: "PRISTINE", totalDetections: 0, newDetections: 0, and boxes: [].
 
-3. REAL DAMAGE DEFINITION:
-   - Only detect: Physical paint gouges revealing undercoat/primer, dented metal sheet panels, cracked bumper plastics, or fractured glass panels.
-   - Minimum threshold: 0.85 confidence.
+2. OEM COMPONENT RECOGNITION (CRITICAL):
+   - Recognize all factory OEM components on this ${vehicleType}: Headlamp assemblies, projector lenses, LED DRL borders, fog lamp bezels, grilles, air dam intakes, wipers, badges, parking sensors, roof rails, and door handles.
+   - NEVER classify dark plastic trim, bulb reflections, headlamp cutouts, or glass outlines as scratches.
+   - A lighting assembly is damaged ONLY if the outer clear glass/lens is visibly SHATTERED, CRACKED, or MISSING.
+
+3. CONFIDENCE & BOUNDING BOX PRECISION:
+   - Minimum confidence threshold: 0.80. Any detection below 0.80 MUST be discarded.
+   - Return tight normalized coordinates [ymin, xmin, ymax, xmax] scaled 0 to 1000 tightly framing the defect itself (excluding clean panels, pavement, wheels, and lights).
 
 4. AUTHENTICITY & FRAUD CHECK:
-   - Check if Image 2 exhibits visible signs of AI generation, Photoshop Generative Fill, or unnatural paint inpainting over undamaged areas.
+   - Check if Image 2 exhibits visible signs of AI generation, Photoshop Generative Fill, or synthetic inpainting over damaged areas.
    - If severe synthetic manipulation is detected, set isAuthentic: false, fraudRisk: "HIGH", fraudReason: "Synthetic paint manipulation / inpainting artifact detected".
 
 5. OUTPUT STRICT JSON:
    - If vehicle is clean: { "status": "PRISTINE", "totalDetections": 0, "newDetections": 0, "boxes": [] }
-   - If damage confirmed: Return exact tight coordinates [ymin, xmin, ymax, xmax] (0 to 1000) only for the physical scratch itself.
+   - If damage confirmed: { "status": "DAMAGED", "totalDetections": N, "newDetections": N, "boxes": [...] }
 `;
 
         const responseSchema = {
@@ -224,7 +274,8 @@ CORE VERIFICATION PROTOCOL:
         };
 
         const generateWithFallback = async () => {
-          const modelsToTry = ['gemini-1.5-flash', 'gemini-2.5-flash', 'gemini-2.0-flash', 'gemini-3.6-flash'];
+          // Use only active production models (gemini-1.5-flash as primary, gemini-1.5-pro as fallback)
+          const modelsToTry = ['gemini-1.5-flash', 'gemini-1.5-pro'];
           let lastErr = null;
 
           for (const modelName of modelsToTry) {
@@ -352,46 +403,51 @@ CORE VERIFICATION PROTOCOL:
         console.error('[Gemini Vision Error]:', geminiError);
         return res.json({
           success: false,
-          message: geminiError.message,
+          status: 'MANUAL_AUDIT_REQUIRED',
+          message: 'Automated vision analysis failed or timed out. Flagged for human review.',
+          summaryMessage: `⚠️ Manual Review Required: ${geminiError.message || 'Vision analysis failed'}`,
           isAuthentic: true,
           fraudRisk: 'LOW',
           totalDetections: 0,
           newDetections: 0,
           boxes: [],
           detections: [],
-          status: 'PRISTINE',
-          severity: 'None',
-          summaryMessage: `AI Telemetry Notice: ${geminiError.message}`
+          requiresManualReview: true,
+          severity: 'Review'
         });
       }
     }
 
-    // Default clean response if API key is not configured
+    // Default response if API key is not configured
     return res.json({
-      success: true,
+      success: false,
+      status: 'MANUAL_AUDIT_REQUIRED',
+      message: 'Gemini API key is not configured. Manual review required.',
+      summaryMessage: '⚠️ Gemini API key not configured. Flagged for human audit.',
       isAuthentic: true,
       fraudRisk: 'LOW',
       totalDetections: 0,
       newDetections: 0,
       boxes: [],
       detections: [],
-      status: 'PRISTINE',
-      severity: 'None',
-      summaryMessage: 'Vehicle pristine - Clean baseline match. No new damage detected.'
+      requiresManualReview: true,
+      severity: 'Review'
     });
   } catch (error) {
     console.error('[Gemini Vision Error]:', error);
     return res.json({
       success: false,
-      message: error.message,
+      status: 'MANUAL_AUDIT_REQUIRED',
+      message: 'Automated vision analysis failed. Flagged for human review.',
+      summaryMessage: `⚠️ Manual Review Required: ${error.message}`,
       isAuthentic: true,
       fraudRisk: 'LOW',
       totalDetections: 0,
       newDetections: 0,
       boxes: [],
       detections: [],
-      status: 'PRISTINE',
-      severity: 'None'
+      requiresManualReview: true,
+      severity: 'Review'
     });
   }
 };

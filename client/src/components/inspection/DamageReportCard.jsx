@@ -20,6 +20,13 @@ export const DamageReportCard = ({
 
   const getSeverityBadge = () => {
     switch (severity) {
+      case 'Review':
+      case 'MANUAL_AUDIT_REQUIRED':
+        return (
+          <span className="bg-amber-950/90 text-amber-300 border border-amber-500/40 text-xs font-semibold px-3 py-1 rounded-full inline-flex items-center gap-1.5 shadow-[0_0_15px_rgba(245,158,11,0.25)]">
+            <AlertTriangle className="w-3.5 h-3.5 text-amber-400" /> ⚠️ Manual Review Required
+          </span>
+        );
       case 'High':
         return (
           <span className="bg-rose-950/80 text-rose-400 border border-rose-500/40 text-xs font-semibold px-3 py-1 rounded-full inline-flex items-center gap-1.5 shadow-[0_0_15px_rgba(244,63,94,0.25)]">

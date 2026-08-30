@@ -48,7 +48,16 @@ export const analyzeVehicleDamageAI = async (preImageUrl, postImageUrl, vehicleT
   try {
     // 1. Clean check: If images are identical or no post image, return clean baseline
     if (!postImageUrl || (preImageUrl && preImageUrl === postImageUrl)) {
-      return { success: true, totalDetections: 0, newDetections: 0, boxes: [], detections: [], severity: 'None', status: 'PRISTINE' };
+      return {
+        success: true,
+        totalDetections: 0,
+        newDetections: 0,
+        boxes: [],
+        detections: [],
+        severity: 'None',
+        status: 'PRISTINE',
+        summaryMessage: 'Vehicle pristine - Clean baseline match. No new damage detected.'
+      };
     }
 
     // Convert local blob URLs to Base64 data URLs for backend delivery
@@ -82,48 +91,67 @@ export const analyzeVehicleDamageAI = async (preImageUrl, postImageUrl, vehicleT
       }
     }
 
-    if (response?.data && Array.isArray(response.data.boxes)) {
-      const boxes = response.data.boxes.map((b) => ({
-        x: b.x,
-        y: b.y,
-        width: b.width,
-        height: b.height,
-        xMin: b.x,
-        yMin: b.y,
-        xMax: Number((b.x + b.width).toFixed(3)),
-        yMax: Number((b.y + b.height).toFixed(3)),
-        boundingBox: {
+    const data = response?.data || {};
+
+    if (data.status === 'MANUAL_AUDIT_REQUIRED' || data.requiresManualReview) {
+      return {
+        success: false,
+        status: 'MANUAL_AUDIT_REQUIRED',
+        requiresManualReview: true,
+        summaryMessage: data.summaryMessage || '⚠️ Vision analysis flagged for manual audit review.',
+        message: data.message || 'Automated analysis failed or requires human inspection.',
+        totalDetections: 0,
+        newDetections: 0,
+        boxes: [],
+        detections: [],
+        severity: 'Review'
+      };
+    }
+
+    if (Array.isArray(data.boxes)) {
+      const boxes = data.boxes
+        .filter((b) => (b.confidence > 1 ? b.confidence / 100 : b.confidence) >= 0.80)
+        .map((b) => ({
+          x: b.x,
+          y: b.y,
+          width: b.width,
+          height: b.height,
           xMin: b.x,
           yMin: b.y,
           xMax: Number((b.x + b.width).toFixed(3)),
-          yMax: Number((b.y + b.height).toFixed(3))
-        },
-        bounding_box: {
-          x_min: b.x,
-          y_min: b.y,
-          x_max: Number((b.x + b.width).toFixed(3)),
-          y_max: Number((b.y + b.height).toFixed(3))
-        },
-        damageType: (b.label || 'scratch').toLowerCase(),
-        label: (b.label || 'DAMAGE').toUpperCase(),
-        confidence: Number(b.confidence) || 0.91,
-        location: b.y > 0.65 ? (b.x < 0.5 ? 'Lower Bumper Left' : 'Lower Bumper Right') : 'Exterior Panel',
-        isNew: true
-      }));
+          yMax: Number((b.y + b.height).toFixed(3)),
+          boundingBox: {
+            xMin: b.x,
+            yMin: b.y,
+            xMax: Number((b.x + b.width).toFixed(3)),
+            yMax: Number((b.y + b.height).toFixed(3))
+          },
+          bounding_box: {
+            x_min: b.x,
+            y_min: b.y,
+            x_max: Number((b.x + b.width).toFixed(3)),
+            y_max: Number((b.y + b.height).toFixed(3))
+          },
+          damageType: (b.label || 'scratch').toLowerCase(),
+          label: (b.label || 'DAMAGE').toUpperCase(),
+          confidence: Number((b.confidence > 1 ? b.confidence / 100 : b.confidence).toFixed(2)),
+          location: b.y > 0.65 ? (b.x < 0.5 ? 'Lower Bumper Left' : 'Lower Bumper Right') : 'Exterior Panel',
+          isNew: true
+        }));
 
-      const isAuthentic = response.data.isAuthentic ?? true;
-      const fraudRisk = response.data.fraudRisk || 'LOW';
-      const fraudReason = response.data.fraudReason;
-      const status = response.data.status || (boxes.length > 0 ? 'NEW_DAMAGE_DETECTED' : 'PRISTINE');
+      const isAuthentic = data.isAuthentic ?? true;
+      const fraudRisk = data.fraudRisk || 'LOW';
+      const fraudReason = data.fraudReason;
+      const status = data.status || (boxes.length > 0 ? 'DAMAGED' : 'PRISTINE');
       const summaryMessage =
-        response.data.summaryMessage ||
+        data.summaryMessage ||
         (boxes.length > 0
           ? `${boxes.length} new physical damage(s) detected.`
-          : 'No new damage detected. Vehicle returned in original condition.');
+          : 'Vehicle pristine - Clean baseline match. No new damage detected.');
       const severity = boxes.length >= 2 ? 'High' : boxes.length === 1 ? 'Moderate' : 'None';
 
       return {
-        success: response.data.success ?? true,
+        success: data.success ?? true,
         isAuthentic,
         fraudRisk,
         fraudReason,
@@ -137,7 +165,6 @@ export const analyzeVehicleDamageAI = async (preImageUrl, postImageUrl, vehicleT
       };
     }
 
-    // 3. Return clean pristine result without any hardcoded/random multi-grid boxes
     return {
       success: true,
       isAuthentic: true,
@@ -154,14 +181,15 @@ export const analyzeVehicleDamageAI = async (preImageUrl, postImageUrl, vehicleT
     console.error('[Gemini Vision Error]:', err);
     return {
       success: false,
+      status: 'MANUAL_AUDIT_REQUIRED',
+      requiresManualReview: true,
       message: err.message,
       totalDetections: 0,
       newDetections: 0,
       boxes: [],
       detections: [],
-      status: 'PRISTINE',
-      severity: 'None',
-      summaryMessage: 'AI Inspection could not complete. Vehicle marked pristine.'
+      severity: 'Review',
+      summaryMessage: '⚠️ Automated analysis unavailable. Flagged for manual host review.'
     };
   }
 };

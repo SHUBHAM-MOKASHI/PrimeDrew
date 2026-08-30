@@ -97,12 +97,16 @@ export const VehicleInspectionStudio = () => {
       const baselinePreview = stage === 'dropoff' ? pickupAngles[angleKey]?.preview : null;
       const result = await analyzeVehicleDamageAI(baselinePreview, targetPreview, angleKey);
 
+      const isManualReview = result?.status === 'MANUAL_AUDIT_REQUIRED' || result?.requiresManualReview || result?.success === false;
+
       const rawDet = result?.detections || result?.boxes || [];
       const resDet = rawDet.filter((d) => {
         const t = (d.damageType || d.damage_type || d.label || '').toLowerCase().trim();
         return !GENERIC_OBJECT_BLACKLIST.has(t);
       });
-      const resSev = result?.severity || (resDet.length >= 2 ? 'High' : resDet.length === 1 ? 'Moderate' : 'None');
+      const resSev = isManualReview
+        ? 'Review'
+        : result?.severity || (resDet.length >= 2 ? 'High' : resDet.length === 1 ? 'Moderate' : 'None');
 
       setActiveAngles((prev) => ({
         ...prev,
@@ -111,7 +115,8 @@ export const VehicleInspectionStudio = () => {
           preview: targetPreview,
           detections: resDet,
           severity: resSev,
-          status: 'analyzed'
+          status: isManualReview ? 'MANUAL_AUDIT_REQUIRED' : 'analyzed',
+          summaryMessage: result?.summaryMessage
         }
       }));
     } catch (err) {
@@ -122,8 +127,9 @@ export const VehicleInspectionStudio = () => {
           ...prev[angleKey],
           preview: targetPreview,
           detections: [],
-          severity: 'None',
-          status: 'analyzed'
+          severity: 'Review',
+          status: 'MANUAL_AUDIT_REQUIRED',
+          summaryMessage: '⚠️ Vision analysis failed. Flagged for manual audit review.'
         }
       }));
     } finally {
@@ -321,7 +327,12 @@ export const VehicleInspectionStudio = () => {
                   <FileCheck className="w-4 h-4 text-cyan-400" /> Post-Trip Return Scan ({postTripCurrent.label})
                 </span>
 
-                {postTripCurrent.status === 'analyzed' || (postTripCurrent.detections && postTripCurrent.preview) ? (
+                {postTripCurrent.status === 'MANUAL_AUDIT_REQUIRED' || postTripCurrent.severity === 'Review' ? (
+                  <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-500/15 text-amber-300 border border-amber-500/40 flex items-center gap-1.5 shadow-sm shadow-amber-500/10">
+                    <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
+                    ⚠️ Manual Review Required
+                  </span>
+                ) : postTripCurrent.status === 'analyzed' || (postTripCurrent.detections && postTripCurrent.preview) ? (
                   postTripCurrent.detections?.length === 0 ? (
                     <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1.5 shadow-sm shadow-emerald-500/10">
                       <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
@@ -363,7 +374,12 @@ export const VehicleInspectionStudio = () => {
                   <Sparkles className="w-4 h-4 text-cyan-400" /> Active Bounding Box Canvas ({currentAngleObj.label})
                 </span>
 
-                {currentAngleObj.status === 'analyzed' ? (
+                {currentAngleObj.status === 'MANUAL_AUDIT_REQUIRED' || currentAngleObj.severity === 'Review' ? (
+                  <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-500/15 text-amber-300 border border-amber-500/40 flex items-center gap-1.5 shadow-sm shadow-amber-500/10">
+                    <AlertTriangle className="w-3.5 h-3.5 text-amber-400" />
+                    ⚠️ Manual Review Required
+                  </span>
+                ) : currentAngleObj.status === 'analyzed' ? (
                   currentDetections.length === 0 ? (
                     <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 flex items-center gap-1.5 shadow-sm shadow-emerald-500/10">
                       <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
