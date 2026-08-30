@@ -6,6 +6,7 @@ import HeroSearchBar from '../components/discovery/HeroSearchBar';
 import FilterBar from '../components/discovery/FilterBar';
 import VehicleCard from '../components/discovery/VehicleCard';
 import BookingCheckoutDrawer from '../components/booking/BookingCheckoutDrawer';
+import ErrorBoundary from '../components/common/ErrorBoundary';
 import { getVehicles } from '../services/vehicleService';
 
 export const VehicleDiscovery = () => {
@@ -194,50 +195,59 @@ export const VehicleDiscovery = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-bold text-white tracking-tight">
-            Available Fleet <span className="text-xs font-normal text-cyan-400 font-mono">({filteredList.length} Vehicles Found)</span>
+            Vehicles <span className="text-xs font-normal text-cyan-400 font-mono">({filteredList.length} Found)</span>
           </h2>
         </div>
 
-        {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="h-80 bg-slate-900/80 rounded-3xl border border-slate-800 shadow-xl animate-pulse p-4 flex flex-col justify-between">
-                <div className="h-44 bg-slate-950 rounded-2xl" />
-                <div className="h-4 bg-slate-800 rounded w-3/4" />
-                <div className="h-4 bg-slate-800 rounded w-1/2" />
-              </div>
-            ))}
-          </div>
-        ) : filteredList.length === 0 ? (
-          <div className="bg-slate-900/80 rounded-3xl p-12 text-center border border-slate-800 shadow-2xl shadow-black space-y-3">
-            <h3 className="text-lg font-bold text-white">No vehicles match your active filters</h3>
-            <p className="text-xs text-slate-400">Try adjusting your category, transmission, or fuel query.</p>
-            <button
-              onClick={handleResetFilters}
-              className="text-xs font-bold text-cyan-400 hover:text-cyan-300 hover:underline cursor-pointer"
-            >
-              Reset Filters
-            </button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-            {filteredList.map((vehicle) => (
-              <VehicleCard
-                key={vehicle._id || vehicle.id}
-                vehicle={vehicle}
-                onQuickBook={handleQuickBook}
-              />
-            ))}
-          </div>
-        )}
+        <ErrorBoundary>
+          {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="h-80 bg-slate-900/80 rounded-3xl border border-slate-800 shadow-xl animate-pulse p-4 flex flex-col justify-between">
+                  <div className="h-44 bg-slate-950 rounded-2xl" />
+                  <div className="h-4 bg-slate-800 rounded w-3/4" />
+                  <div className="h-4 bg-slate-800 rounded w-1/2" />
+                </div>
+              ))}
+            </div>
+          ) : filteredList.length === 0 ? (
+            <div className="bg-slate-900/80 rounded-3xl p-12 text-center border border-slate-800 shadow-2xl shadow-black space-y-3">
+              <h3 className="text-lg font-bold text-white">No vehicles match your active filters</h3>
+              <p className="text-xs text-slate-400">Try adjusting your category, transmission, or fuel query.</p>
+              <button
+                onClick={handleResetFilters}
+                className="text-xs font-bold text-cyan-400 hover:text-cyan-300 hover:underline cursor-pointer"
+              >
+                Reset Filters
+              </button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+              {filteredList.map((vehicle) => (
+                <VehicleCard
+                  key={vehicle._id || vehicle.id}
+                  vehicle={vehicle}
+                  onQuickBook={handleQuickBook}
+                />
+              ))}
+            </div>
+          )}
+        </ErrorBoundary>
       </div>
 
       {/* Booking Checkout Drawer */}
-      <BookingCheckoutDrawer
-        isOpen={isCheckoutOpen}
-        onClose={() => setIsCheckoutOpen(false)}
-        vehicle={selectedVehicle}
-      />
+      <ErrorBoundary>
+        {selectedVehicle && (
+          <BookingCheckoutDrawer
+            isOpen={isCheckoutOpen}
+            onClose={() => {
+              setIsCheckoutOpen(false);
+              setSelectedVehicle(null);
+            }}
+            vehicle={selectedVehicle}
+          />
+        )}
+      </ErrorBoundary>
     </div>
   );
 };

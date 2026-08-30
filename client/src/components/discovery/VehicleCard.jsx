@@ -155,7 +155,7 @@ export const VehicleCard = ({ vehicle, onQuickBook }) => {
             }}
             className="bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white font-bold text-xs px-4 py-2 shadow-lg shadow-blue-600/30 rounded-xl active:scale-95 transition-all cursor-pointer"
           >
-            Quick Reserve
+            Book Vehicle
           </button>
         </div>
       </div>

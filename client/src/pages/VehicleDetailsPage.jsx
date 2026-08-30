@@ -6,6 +6,7 @@ import { Star, ShieldCheck, MapPin, Gauge, Fuel, Users, CheckCircle2, Clock, Cal
 import Button from '../components/common/Button';
 import BookingCheckoutDrawer from '../components/booking/BookingCheckoutDrawer';
 import VehicleGallery from '../components/fleet/VehicleGallery';
+import ErrorBoundary from '../components/common/ErrorBoundary';
 import { getVehicleById } from '../services/vehicleService';
 
 export const VehicleDetailsPage = () => {
@@ -82,7 +83,7 @@ export const VehicleDetailsPage = () => {
     return (
       <div className="min-h-screen bg-gradient-to-b from-[#030712] via-[#080d1a] to-[#020617] flex flex-col items-center justify-center gap-4 text-white">
         <h2 className="text-xl font-bold">Vehicle Not Found</h2>
-        <Button variant="outline" onClick={() => navigate('/vehicles')}>Back to Fleet Catalog</Button>
+        <Button variant="outline" onClick={() => navigate('/vehicles')}>Back to Vehicles</Button>
       </div>
     );
   }
@@ -107,7 +108,7 @@ export const VehicleDetailsPage = () => {
               onClick={() => navigate('/vehicles')}
               className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-400 hover:text-cyan-400 transition-colors mb-2 cursor-pointer"
             >
-              <ArrowLeft className="w-4 h-4" /> Back to Fleet Catalog
+              <ArrowLeft className="w-4 h-4" /> Back to Vehicles
             </button>
             <h1 className="text-3xl sm:text-4xl font-extrabold text-white">{vehicle.title}</h1>
             <p className="text-xs sm:text-sm text-slate-400 flex items-center gap-1.5 mt-1">
@@ -257,11 +258,15 @@ export const VehicleDetailsPage = () => {
       </div>
 
       {/* Booking Checkout Drawer */}
-      <BookingCheckoutDrawer
-        isOpen={isCheckoutOpen}
-        onClose={() => setIsCheckoutOpen(false)}
-        vehicle={vehicle}
-      />
+      <ErrorBoundary>
+        {vehicle && (
+          <BookingCheckoutDrawer
+            isOpen={isCheckoutOpen}
+            onClose={() => setIsCheckoutOpen(false)}
+            vehicle={vehicle}
+          />
+        )}
+      </ErrorBoundary>
     </div>
   );
 };

@@ -57,7 +57,7 @@ export const Navbar = () => {
   const profileDropdownRef = useRef(null);
 
   const navLinks = [
-    { name: 'Fleet Catalog', icon: Car, path: '/vehicles' },
+    { name: 'Vehicles', icon: Car, path: '/vehicles' },
     { name: 'AI Damage Studio', icon: Sparkles, path: '/inspections' },
     ...(isAdmin ? [{ name: 'Master Admin', icon: ShieldCheck, path: '/admin', badge: 'SUPER' }] : []),
     ...(isHostApproved ? [{ name: 'Host Studio', icon: SlidersHorizontal, path: '/host' }] : [])

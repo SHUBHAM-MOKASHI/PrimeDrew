@@ -19,6 +19,8 @@ export const BookingCheckoutDrawer = ({ isOpen, onClose, vehicle }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [bookingSuccess, setBookingSuccess] = useState(false);
+  const [createdBooking, setCreatedBooking] = useState(null);
+  const [isHandoverOpen, setIsHandoverOpen] = useState(false);
 
   if (!vehicle) return null;
 
@@ -70,9 +72,6 @@ export const BookingCheckoutDrawer = ({ isOpen, onClose, vehicle }) => {
       setError(err.message || 'Failed to submit booking request. Please check vehicle availability.');
     }
   };
-
-  const [createdBooking, setCreatedBooking] = useState(null);
-  const [isHandoverOpen, setIsHandoverOpen] = useState(false);
 
   return (
     <>
