@@ -136,3 +136,10 @@ export const requireAdmin = (req, res, next) => {
 
   next();
 };
+
+// Explicit aliases to support various route import conventions
+export const authenticate = protect;
+export const authMiddleware = protect;
+export const verifyToken = protect;
+
+export default protect;

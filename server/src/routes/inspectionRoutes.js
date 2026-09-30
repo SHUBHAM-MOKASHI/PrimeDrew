@@ -6,7 +6,7 @@ import {
   fileDispute,
   resolveDisputeHost
 } from '../controllers/inspectionController.js';
-import { optionalAuth, authenticate } from '../middlewares/auth.js';
+import { optionalAuth, protect, authenticate } from '../middlewares/auth.js';
 import { upload } from '../middlewares/upload.js';
 
 const router = express.Router();
