@@ -8,8 +8,10 @@ import BookingCheckoutDrawer from '../components/booking/BookingCheckoutDrawer';
 import VehicleGallery from '../components/fleet/VehicleGallery';
 import ErrorBoundary from '../components/common/ErrorBoundary';
 import { getVehicleById } from '../services/vehicleService';
+import { useAuth } from '../context/AuthContext';
 
 export const VehicleDetailsPage = () => {
+  const { user, token, kycStatus, openAuthModal, openKycModal } = useAuth();
   const { id } = useParams();
   const navigate = useNavigate();
 
@@ -97,6 +99,24 @@ export const VehicleDetailsPage = () => {
     'Automated YOLOv8 Inspection'
   ];
 
+  const handleBookClick = () => {
+    // Case A: User is NOT logged in -> Open standard Login / Auth modal
+    if (!token || !user) {
+      openAuthModal('renter');
+      return;
+    }
+
+    // Case B: User is LOGGED IN but KYC is NOT verified -> Open Biometric KYC Verification Modal directly
+    const isVerified = user?.isKycVerified || user?.kycStatus === 'verified' || kycStatus === 'verified';
+    if (!isVerified) {
+      openKycModal();
+      return;
+    }
+
+    // Case C: User is LOGGED IN and KYC is VERIFIED -> Open Direct Booking / Checkout modal
+    setIsCheckoutOpen(true);
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#030712] via-[#080d1a] to-[#020617] text-slate-100 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
@@ -121,8 +141,8 @@ export const VehicleDetailsPage = () => {
               <span className="text-2xl font-extrabold text-white">₹{vehicle.pricing?.baseDailyRate || 2500}</span>
               <span className="text-xs text-slate-400"> / day</span>
             </div>
-            <Button variant="primary" size="lg" leftIcon={Lock} onClick={() => setIsCheckoutOpen(true)}>
-              Book Now
+            <Button variant="primary" size="lg" leftIcon={Lock} onClick={handleBookClick}>
+              Book Vehicle
             </Button>
           </div>
         </div>
@@ -246,7 +266,7 @@ export const VehicleDetailsPage = () => {
                 variant="primary"
                 size="lg"
                 leftIcon={Lock}
-                onClick={() => setIsCheckoutOpen(true)}
+                onClick={handleBookClick}
                 className="w-full py-4 text-base font-bold shadow-lg shadow-blue-600/30"
               >
                 Proceed to Checkout

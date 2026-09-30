@@ -4,7 +4,7 @@ import Button from '../components/common/Button';
 import HostFleetManager from '../components/host/HostFleetManager';
 import IncomingBookingsList from '../components/host/IncomingBookingsList';
 import EarningsAnalytics from '../components/host/EarningsAnalytics';
-import VehicleListingWizard from '../components/host/VehicleListingWizard';
+import AddVehicleModal from '../components/host/AddVehicleModal';
 import HostApplicationModal from '../components/host/HostApplicationModal';
 import { getHostFleet } from '../services/hostService';
 import { useAuth } from '../context/AuthContext';
@@ -360,7 +360,7 @@ export const HostDashboardPage = () => {
       </div>
 
       {/* Vehicle Listing Wizard Modal */}
-      <VehicleListingWizard
+      <AddVehicleModal
         isOpen={isWizardOpen}
         onClose={() => setIsWizardOpen(false)}
         onVehicleCreated={handleVehicleCreated}

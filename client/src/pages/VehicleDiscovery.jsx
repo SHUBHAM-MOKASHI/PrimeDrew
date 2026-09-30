@@ -8,8 +8,10 @@ import VehicleCard from '../components/discovery/VehicleCard';
 import BookingCheckoutDrawer from '../components/booking/BookingCheckoutDrawer';
 import ErrorBoundary from '../components/common/ErrorBoundary';
 import { getVehicles } from '../services/vehicleService';
+import { useAuth } from '../context/AuthContext';
 
 export const VehicleDiscovery = () => {
+  const { user, token, kycStatus, openAuthModal, openKycModal } = useAuth();
   const [searchParams] = useSearchParams();
   const [vehicles, setVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -160,6 +162,20 @@ export const VehicleDiscovery = () => {
   };
 
   const handleQuickBook = (v) => {
+    // Case A: User is NOT logged in -> Open standard Login / Auth modal
+    if (!token || !user) {
+      openAuthModal('renter');
+      return;
+    }
+
+    // Case B: User is LOGGED IN but KYC is NOT verified -> Open Biometric KYC Verification Modal directly
+    const isVerified = user?.isKycVerified || user?.kycStatus === 'verified' || kycStatus === 'verified';
+    if (!isVerified) {
+      openKycModal();
+      return;
+    }
+
+    // Case C: User is LOGGED IN and KYC is VERIFIED -> Open Direct Booking / Checkout modal
     setSelectedVehicle(v);
     setIsCheckoutOpen(true);
   };

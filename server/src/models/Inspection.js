@@ -48,8 +48,18 @@ const inspectionSchema = new mongoose.Schema(
     },
     severity: {
       type: String,
-      enum: ['None', 'Moderate', 'High'],
+      enum: ['None', 'Moderate', 'High', 'Review'],
       default: 'None'
+    },
+    inspectionStatus: {
+      type: String,
+      enum: ['PENDING', 'PASSED_PRISTINE', 'DAMAGE_DETECTED', 'MANUAL_AUDIT_REQUIRED'],
+      default: 'PENDING'
+    },
+    escrowStatus: {
+      type: String,
+      enum: ['HELD', 'RELEASED_TO_RENTER', 'TRANSFERRED_TO_HOST', 'DISPUTED'],
+      default: 'HELD'
     },
     verifiedByHost: {
       type: Boolean,

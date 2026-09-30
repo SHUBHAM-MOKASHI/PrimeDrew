@@ -1,14 +1,7 @@
 import axios from 'axios';
 
-const RAW_API_URL =
-  import.meta.env.VITE_API_URL ||
-  import.meta.env.VITE_API_BASE_URL ||
-  (typeof window !== 'undefined' && window.location.origin.includes('vercel.app')
-    ? 'https://primedrew-api.onrender.com'
-    : '');
-
-const API_BASE_URL = RAW_API_URL.replace(/\/+$/, '');
-const API_BASE = API_BASE_URL ? `${API_BASE_URL}/api/v1/inspections` : '/api/v1/inspections';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://primedrew-api.onrender.com';
+const API_BASE = `${API_BASE_URL.replace(/\/+$/, '')}/api/v1/inspections`;
 
 /**
  * Converts blob: URLs or File references to Base64 Data URLs for backend AI consumption
@@ -42,9 +35,10 @@ const ensureDataUrl = async (url) => {
  * @param {string} preImageUrl - Baseline Pre-Trip inspection image URL / Blob / Base64
  * @param {string} postImageUrl - Return Post-Trip inspection image URL / Blob / Base64
  * @param {string} [vehicleType='car'] - Vehicle category ('car', 'bike', 'suv')
+ * @param {string} [bookingId=null] - Associated booking ID for escrow updates
  * @returns {Promise<{totalDetections: number, newDetections: number, detections: Array, boxes: Array, severity: string}>}
  */
-export const analyzeVehicleDamageAI = async (preImageUrl, postImageUrl, vehicleType = 'car') => {
+export const analyzeVehicleDamageAI = async (preImageUrl, postImageUrl, vehicleType = 'car', bookingId = null) => {
   try {
     // 1. Clean check: If images are identical or no post image, return clean baseline
     if (!postImageUrl || (preImageUrl && preImageUrl === postImageUrl)) {
@@ -56,6 +50,8 @@ export const analyzeVehicleDamageAI = async (preImageUrl, postImageUrl, vehicleT
         detections: [],
         severity: 'None',
         status: 'PRISTINE',
+        inspectionStatus: 'PASSED_PRISTINE',
+        escrowStatus: 'RELEASED_TO_RENTER',
         summaryMessage: 'Vehicle pristine - Clean baseline match. No new damage detected.'
       };
     }
@@ -67,6 +63,7 @@ export const analyzeVehicleDamageAI = async (preImageUrl, postImageUrl, vehicleT
     ]);
 
     const payload = {
+      bookingId,
       preImageUrl: cleanPre,
       postImageUrl: cleanPost,
       vehicleType

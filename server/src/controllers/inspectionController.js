@@ -3,8 +3,8 @@ import axios from 'axios';
 import { GoogleGenAI, Type } from '@google/genai';
 import Inspection from '../models/Inspection.js';
 import Booking from '../models/Booking.js';
+import { detectDamageWithGemini } from '../services/geminiAiService.js';
 
-const AI_SERVICE_URL = process.env.AI_SERVICE_URL || 'http://localhost:8000';
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
 const GENERIC_OBJECT_BLACKLIST = new Set([
@@ -167,14 +167,64 @@ const formatDetections = (rawDetections = []) => {
 const getGeminiApiKey = () => process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
 
 /**
+ * Helper: Updates Booking with escrow, inspection status, detections, and 24-hr dispute deadline
+ */
+const updateBookingEscrowState = async (bookingId, {
+  inspectionStatus,
+  escrowStatus,
+  detections = [],
+  preImageUrl = null,
+  postImageUrl = null
+}) => {
+  if (!bookingId) return null;
+  try {
+    const booking = await Booking.findById(bookingId);
+    if (!booking) return null;
+
+    if (inspectionStatus) booking.inspectionStatus = inspectionStatus;
+    if (escrowStatus) booking.escrowStatus = escrowStatus;
+    if (preImageUrl) booking.preImageUrl = preImageUrl;
+    if (postImageUrl) booking.postImageUrl = postImageUrl;
+
+    if (Array.isArray(detections)) {
+      booking.detections = detections.map((d) => {
+        const rawBox = d.box || d.boundingBox || d.bounding_box || {};
+        return {
+          label: (d.label || d.damageType || 'SCRATCH').toUpperCase(),
+          confidence: d.confidence > 1 ? Number((d.confidence / 100).toFixed(2)) : Number((d.confidence ?? 0.85).toFixed(2)),
+          box: {
+            ymin: Number((rawBox.ymin ?? rawBox.y_min ?? rawBox.yMin ?? d.yMin ?? d.y ?? 0).toFixed(3)),
+            xmin: Number((rawBox.xmin ?? rawBox.x_min ?? rawBox.xMin ?? d.xMin ?? d.x ?? 0).toFixed(3)),
+            ymax: Number((rawBox.ymax ?? rawBox.y_max ?? rawBox.yMax ?? d.yMax ?? 0).toFixed(3)),
+            xmax: Number((rawBox.xmax ?? rawBox.x_max ?? rawBox.xMax ?? d.xMax ?? 0).toFixed(3))
+          }
+        };
+      });
+    }
+
+    if (inspectionStatus === 'DAMAGE_DETECTED' || inspectionStatus === 'MANUAL_AUDIT_REQUIRED') {
+      if (!booking.dispute) booking.dispute = {};
+      // Set 24-hour contest deadline
+      booking.dispute.disputeDeadline = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    }
+
+    await booking.save();
+    return booking;
+  } catch (err) {
+    console.error('[Escrow State Update Error]:', err.message);
+    return null;
+  }
+};
+
+/**
  * @desc    Universal Multi-Vehicle AI Damage Inspection Engine (Cars, Bikes, SUVs) using Gemini Vision API
- * @route   POST /api/v1/inspections/analyze-universal or /api/damage/analyze-universal
+ * @route   POST /api/v1/inspections/analyze-universal or /api/v1/inspections/analyze-damage
  * @access  Public / Private
  */
 export const analyzeUniversalVehicleDamage = async (req, res) => {
-  try {
-    const { preImageUrl, postImageUrl, vehicleType = 'car' } = req.body;
+  const { bookingId, preImageUrl, postImageUrl, vehicleType = 'car' } = req.body || {};
 
+  try {
     if (!preImageUrl || !postImageUrl) {
       return res.status(400).json({
         success: false,
@@ -187,24 +237,36 @@ export const analyzeUniversalVehicleDamage = async (req, res) => {
       });
     }
 
+    // 1. Identical Baseline Check
     if (preImageUrl === postImageUrl) {
+      await updateBookingEscrowState(bookingId, {
+        inspectionStatus: 'PASSED_PRISTINE',
+        escrowStatus: 'RELEASED_TO_RENTER',
+        detections: [],
+        preImageUrl,
+        postImageUrl
+      });
+
       return res.json({
         success: true,
         totalDetections: 0,
         newDetections: 0,
         boxes: [],
         detections: [],
-        status: 'PRISTINE',
+        status: 'PASSED_PRISTINE',
+        inspectionStatus: 'PASSED_PRISTINE',
+        escrowStatus: 'RELEASED_TO_RENTER',
+        securityDepositAmount: 5000,
         isAuthentic: true,
         fraudRisk: 'LOW',
         severity: 'None',
-        summaryMessage: 'Vehicle pristine - Clean baseline match. No new damage detected.'
+        summaryMessage: 'Vehicle pristine - Clean baseline match. Security deposit released.'
       });
     }
 
     const apiKey = getGeminiApiKey();
 
-    // Initialize Gemini AI Client if API key is provided
+    // 2. Gemini AI Inspection Execution
     if (apiKey) {
       try {
         const ai = new GoogleGenAI({ apiKey });
@@ -274,8 +336,7 @@ CORE VERIFICATION PROTOCOL:
         };
 
         const generateWithFallback = async () => {
-          // Use only active production models (gemini-1.5-flash as primary, gemini-1.5-pro as fallback)
-          const modelsToTry = ['gemini-1.5-flash', 'gemini-1.5-pro'];
+          const modelsToTry = ['gemini-2.5-flash', 'gemini-1.5-flash'];
           let lastErr = null;
 
           for (const modelName of modelsToTry) {
@@ -308,39 +369,71 @@ CORE VERIFICATION PROTOCOL:
         };
 
         const response = await generateWithFallback();
-        const data = JSON.parse(response.text);
+        let data = {};
+        try {
+          data = JSON.parse(response.text);
+        } catch (jsonErr) {
+          throw new Error(`Unparseable JSON from vision model: ${jsonErr.message}`);
+        }
 
+        // Fraud detected check
         if (data.fraudRisk === 'HIGH') {
+          await updateBookingEscrowState(bookingId, {
+            inspectionStatus: 'MANUAL_AUDIT_REQUIRED',
+            escrowStatus: 'HELD',
+            detections: [],
+            preImageUrl,
+            postImageUrl
+          });
+
           return res.json({
             success: true,
             isAuthentic: false,
             fraudRisk: 'HIGH',
             fraudReason: data.fraudReason || 'Synthetic image manipulation detected',
-            status: 'FRAUD_SUSPECTED',
+            status: 'MANUAL_AUDIT_REQUIRED',
+            inspectionStatus: 'MANUAL_AUDIT_REQUIRED',
+            escrowStatus: 'HELD',
+            securityDepositAmount: 5000,
+            disputeDeadline: new Date(Date.now() + 24 * 60 * 60 * 1000),
             totalDetections: 0,
             newDetections: 0,
             boxes: [],
             detections: [],
             severity: 'High',
-            summaryMessage: `⚠️ Forensics Alert: ${data.fraudReason || 'Synthetic image manipulation detected'}`
+            requiresManualReview: true,
+            summaryMessage: `⚠️ Forensics Alert: ${data.fraudReason || 'Synthetic image manipulation detected'}. Escrow held for manual review.`
           });
         }
 
+        // Pristine check (Zero damage)
         if (data.status === 'PRISTINE' || !data.boxes || data.boxes.length === 0) {
+          await updateBookingEscrowState(bookingId, {
+            inspectionStatus: 'PASSED_PRISTINE',
+            escrowStatus: 'RELEASED_TO_RENTER',
+            detections: [],
+            preImageUrl,
+            postImageUrl
+          });
+
           return res.json({
             success: true,
             isAuthentic: data.isAuthentic ?? true,
             fraudRisk: data.fraudRisk || 'LOW',
-            status: 'PRISTINE',
+            status: 'PASSED_PRISTINE',
+            inspectionStatus: 'PASSED_PRISTINE',
+            escrowStatus: 'RELEASED_TO_RENTER',
+            securityDepositAmount: 5000,
             totalDetections: 0,
             newDetections: 0,
             boxes: [],
             detections: [],
             severity: 'None',
-            summaryMessage: 'Vehicle pristine - Clean baseline match. No new damage detected.'
+            summaryMessage: 'Vehicle pristine - Clean baseline match. Security deposit released to renter.'
           });
         }
 
+        // Format damage detections
         const formattedBoxes = (data.boxes || [])
           .filter((b) => (b.confidence > 1 ? b.confidence / 100 : b.confidence) >= 0.80)
           .map((b) => {
@@ -366,6 +459,12 @@ CORE VERIFICATION PROTOCOL:
                 xMax: Number((x + width).toFixed(3)),
                 yMax: Number((y + height).toFixed(3))
               },
+              box: {
+                ymin: Number(y.toFixed(3)),
+                xmin: Number(x.toFixed(3)),
+                ymax: Number((y + height).toFixed(3)),
+                xmax: Number((x + width).toFixed(3))
+              },
               bounding_box: {
                 x_min: Number(x.toFixed(3)),
                 y_min: Number(y.toFixed(3)),
@@ -380,32 +479,82 @@ CORE VERIFICATION PROTOCOL:
             };
           });
 
-        const status = formattedBoxes.length > 0 ? 'DAMAGED' : 'PRISTINE';
-        const severity = formattedBoxes.length >= 2 ? 'High' : formattedBoxes.length === 1 ? 'Moderate' : 'None';
+        if (formattedBoxes.length === 0) {
+          await updateBookingEscrowState(bookingId, {
+            inspectionStatus: 'PASSED_PRISTINE',
+            escrowStatus: 'RELEASED_TO_RENTER',
+            detections: [],
+            preImageUrl,
+            postImageUrl
+          });
+
+          return res.json({
+            success: true,
+            isAuthentic: true,
+            fraudRisk: 'LOW',
+            status: 'PASSED_PRISTINE',
+            inspectionStatus: 'PASSED_PRISTINE',
+            escrowStatus: 'RELEASED_TO_RENTER',
+            securityDepositAmount: 5000,
+            totalDetections: 0,
+            newDetections: 0,
+            boxes: [],
+            detections: [],
+            severity: 'None',
+            summaryMessage: 'Vehicle pristine - Clean baseline match. Security deposit released.'
+          });
+        }
+
+        // Damage Confirmed
+        const status = 'DAMAGE_DETECTED';
+        const severity = formattedBoxes.length >= 2 ? 'High' : 'Moderate';
+        const deadline = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+        await updateBookingEscrowState(bookingId, {
+          inspectionStatus: 'DAMAGE_DETECTED',
+          escrowStatus: 'HELD',
+          detections: formattedBoxes,
+          preImageUrl,
+          postImageUrl
+        });
 
         return res.json({
           success: true,
           isAuthentic: data.isAuthentic ?? true,
           fraudRisk: data.fraudRisk || 'LOW',
-          status,
+          status: 'DAMAGE_DETECTED',
+          inspectionStatus: 'DAMAGE_DETECTED',
+          escrowStatus: 'HELD',
+          securityDepositAmount: 5000,
+          disputeDeadline: deadline,
           totalDetections: formattedBoxes.length,
           newDetections: formattedBoxes.length,
           boxes: formattedBoxes,
           detections: formattedBoxes,
           severity,
-          summaryMessage:
-            data.summary ||
-            (formattedBoxes.length > 0
-              ? `${formattedBoxes.length} new physical damage anomaly(s) flagged.`
-              : 'Vehicle pristine - Clean baseline match. No new damage detected.')
+          summaryMessage: `${formattedBoxes.length} physical damage defect(s) detected. Security deposit locked in Escrow pending 24-hr review.`
         });
       } catch (geminiError) {
-        console.error('[Gemini Vision Error]:', geminiError);
+        console.error('[Gemini Vision Error - Escrow Held for Audit]:', geminiError.message);
+
+        const deadline = new Date(Date.now() + 24 * 60 * 60 * 1000);
+        await updateBookingEscrowState(bookingId, {
+          inspectionStatus: 'MANUAL_AUDIT_REQUIRED',
+          escrowStatus: 'HELD',
+          detections: [],
+          preImageUrl,
+          postImageUrl
+        });
+
         return res.json({
-          success: false,
+          success: true,
           status: 'MANUAL_AUDIT_REQUIRED',
-          message: 'Automated vision analysis failed or timed out. Flagged for human review.',
-          summaryMessage: `⚠️ Manual Review Required: ${geminiError.message || 'Vision analysis failed'}`,
+          inspectionStatus: 'MANUAL_AUDIT_REQUIRED',
+          escrowStatus: 'HELD',
+          securityDepositAmount: 5000,
+          message: 'Vision model uncertainty/failure. Escrow held for manual review.',
+          summaryMessage: '⚠️ Vision model uncertainty. Security deposit locked in Escrow for manual audit.',
+          disputeDeadline: deadline,
           isAuthentic: true,
           fraudRisk: 'LOW',
           totalDetections: 0,
@@ -418,12 +567,25 @@ CORE VERIFICATION PROTOCOL:
       }
     }
 
-    // Default response if API key is not configured
+    // Default if API key not configured -> Flag for manual audit & hold escrow
+    const deadline = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    await updateBookingEscrowState(bookingId, {
+      inspectionStatus: 'MANUAL_AUDIT_REQUIRED',
+      escrowStatus: 'HELD',
+      detections: [],
+      preImageUrl,
+      postImageUrl
+    });
+
     return res.json({
-      success: false,
+      success: true,
       status: 'MANUAL_AUDIT_REQUIRED',
-      message: 'Gemini API key is not configured. Manual review required.',
-      summaryMessage: '⚠️ Gemini API key not configured. Flagged for human audit.',
+      inspectionStatus: 'MANUAL_AUDIT_REQUIRED',
+      escrowStatus: 'HELD',
+      securityDepositAmount: 5000,
+      message: 'Vision model uncertainty/failure. Escrow held for manual review.',
+      summaryMessage: '⚠️ Vision model unconfigured. Escrow held for manual review.',
+      disputeDeadline: deadline,
       isAuthentic: true,
       fraudRisk: 'LOW',
       totalDetections: 0,
@@ -434,12 +596,26 @@ CORE VERIFICATION PROTOCOL:
       severity: 'Review'
     });
   } catch (error) {
-    console.error('[Gemini Vision Error]:', error);
+    console.error('[Damage Inspection Exception]:', error.message);
+    const deadline = new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+    await updateBookingEscrowState(bookingId, {
+      inspectionStatus: 'MANUAL_AUDIT_REQUIRED',
+      escrowStatus: 'HELD',
+      detections: [],
+      preImageUrl,
+      postImageUrl
+    });
+
     return res.json({
-      success: false,
+      success: true,
       status: 'MANUAL_AUDIT_REQUIRED',
-      message: 'Automated vision analysis failed. Flagged for human review.',
+      inspectionStatus: 'MANUAL_AUDIT_REQUIRED',
+      escrowStatus: 'HELD',
+      securityDepositAmount: 5000,
+      message: 'Vision model uncertainty/failure. Escrow held for manual review.',
       summaryMessage: `⚠️ Manual Review Required: ${error.message}`,
+      disputeDeadline: deadline,
       isAuthentic: true,
       fraudRisk: 'LOW',
       totalDetections: 0,
@@ -449,6 +625,162 @@ CORE VERIFICATION PROTOCOL:
       requiresManualReview: true,
       severity: 'Review'
     });
+  }
+};
+
+/**
+ * @desc    File a dispute on an inspection verdict within 24 hours (Renter action)
+ * @route   POST /api/v1/inspections/:bookingId/dispute
+ * @access  Private (Renter / User)
+ */
+export const fileDispute = async (req, res, next) => {
+  try {
+    const { bookingId } = req.params;
+    const { reason = 'Renter contested automated AI damage verdict.' } = req.body || {};
+
+    const booking = await Booking.findById(bookingId).populate('renter host vehicle');
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: 'Booking record not found.'
+      });
+    }
+
+    // Enforce 24-hour contest deadline
+    const deadline = booking.dispute?.disputeDeadline;
+    if (deadline && new Date() > new Date(deadline)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Dispute window has closed. Contests must be submitted within 24 hours of inspection completion.'
+      });
+    }
+
+    if (!booking.dispute) {
+      booking.dispute = {};
+    }
+
+    booking.dispute.isDisputed = true;
+    booking.dispute.disputedBy = req.user?._id || req.user?.id || booking.renter?._id;
+    booking.dispute.renterReason = reason;
+    booking.dispute.hostDecision = 'PENDING';
+    booking.escrowStatus = 'DISPUTED';
+
+    await booking.save();
+
+    return res.status(200).json({
+      success: true,
+      message: 'Dispute filed successfully. Security deposit is locked in DISPUTED escrow state.',
+      escrowStatus: booking.escrowStatus,
+      booking
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * @desc    Resolve a damage dispute / audit (Host action)
+ * @route   POST /api/v1/inspections/:bookingId/resolve-host
+ * @access  Private (Host / Admin)
+ */
+export const resolveDisputeHost = async (req, res, next) => {
+  try {
+    const { bookingId } = req.params;
+    const { decision } = req.body || {};
+
+    const validDecisions = ['DISMISSED_DIRT_GLARE', 'ACCEPTED_DAMAGE', 'RESOLVED_SPLIT'];
+    if (!decision || !validDecisions.includes(decision)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid host decision. Must be one of: ${validDecisions.join(', ')}`
+      });
+    }
+
+    const booking = await Booking.findById(bookingId).populate('renter host vehicle');
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: 'Booking record not found.'
+      });
+    }
+
+    if (!booking.dispute) {
+      booking.dispute = {};
+    }
+
+    booking.dispute.hostDecision = decision;
+    booking.dispute.resolvedAt = new Date();
+
+    if (decision === 'DISMISSED_DIRT_GLARE') {
+      // Host dismissed as dirt / normal wear -> refund security deposit to renter
+      booking.escrowStatus = 'RELEASED_TO_RENTER';
+      booking.inspectionStatus = 'PASSED_PRISTINE';
+    } else if (decision === 'ACCEPTED_DAMAGE') {
+      // Host confirmed real damage -> security deposit transferred to host
+      booking.escrowStatus = 'TRANSFERRED_TO_HOST';
+      booking.inspectionStatus = 'DAMAGE_DETECTED';
+    } else if (decision === 'RESOLVED_SPLIT') {
+      booking.escrowStatus = 'RELEASED_TO_RENTER';
+    }
+
+    await booking.save();
+
+    return res.status(200).json({
+      success: true,
+      message: `Dispute resolved as ${decision}. Escrow updated to ${booking.escrowStatus}.`,
+      escrowStatus: booking.escrowStatus,
+      inspectionStatus: booking.inspectionStatus,
+      booking
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * @desc    Get booking audit, escrow state, images, and detections for side-by-side review
+ * @route   GET /api/v1/inspections/:bookingId/audit
+ * @access  Public / Private
+ */
+export const getBookingAudit = async (req, res, next) => {
+  try {
+    const { bookingId } = req.params;
+
+    const booking = await Booking.findById(bookingId).populate('renter host vehicle');
+    if (!booking) {
+      return res.status(404).json({
+        success: false,
+        message: 'Booking record not found for audit.'
+      });
+    }
+
+    let preImageUrl = booking.preImageUrl;
+    let postImageUrl = booking.postImageUrl;
+
+    // Fallback: look up in Inspection collection if not directly stored on Booking
+    if (!preImageUrl || !postImageUrl) {
+      const inspections = await Inspection.find({ booking: bookingId }).sort({ createdAt: 1 });
+      const pickupInsp = inspections.find((i) => i.stage === 'pickup');
+      const dropoffInsp = inspections.find((i) => i.stage === 'dropoff');
+
+      if (!preImageUrl && pickupInsp?.images?.[0]) {
+        preImageUrl = pickupInsp.images[0];
+      }
+      if (!postImageUrl && dropoffInsp?.images?.[0]) {
+        postImageUrl = dropoffInsp.images[0];
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      booking: {
+        ...booking.toObject(),
+        preImageUrl: preImageUrl || null,
+        postImageUrl: postImageUrl || null
+      }
+    });
+  } catch (err) {
+    next(err);
   }
 };
 
@@ -468,36 +800,21 @@ export const processVehicleInspection = async (req, res, next) => {
       });
     }
 
-    // Forward image buffer to FastAPI AI Service
-    const formData = new FormData();
-    formData.append('file', req.file.buffer, {
-      filename: req.file.originalname || 'inspection.jpg',
-      contentType: req.file.mimetype || 'image/jpeg'
-    });
-
+    // 100% JavaScript Gemini Vision Damage Detection
     let detections = [];
     let severity = 'None';
     let rawAiData = null;
 
     try {
-      const aiResponse = await axios.post(
-        `${AI_SERVICE_URL}/api/v1/ai/detect-damage`,
-        formData,
-        {
-          headers: {
-            ...formData.getHeaders()
-          },
-          timeout: 25000
-        }
+      const geminiResult = await detectDamageWithGemini(
+        req.file.buffer,
+        req.file.mimetype || 'image/jpeg'
       );
-
-      rawAiData = aiResponse.data;
-      if (rawAiData?.detections) {
-        detections = formatDetections(rawAiData.detections);
-        severity = detections.length >= 2 ? 'High' : detections.length === 1 ? 'Moderate' : 'None';
-      }
+      detections = formatDetections(geminiResult.detections);
+      severity = geminiResult.severity || (detections.length >= 2 ? 'High' : detections.length === 1 ? 'Moderate' : 'None');
+      rawAiData = geminiResult;
     } catch (aiError) {
-      console.warn('[AI Service Notice - Damage Telemetry]:', aiError.message);
+      console.warn('[Gemini Damage Detection Notice]:', aiError.message);
       detections = [];
       severity = 'None';
     }

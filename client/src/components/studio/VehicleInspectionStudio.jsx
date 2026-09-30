@@ -1,10 +1,10 @@
-'use client';
-
 import React, { useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import {
   Sparkles,
   ArrowRightLeft,
   ShieldCheck,
+  ShieldAlert,
   CheckCircle2,
   Lock,
   FileCheck,
@@ -64,6 +64,8 @@ const createEmptyAngleState = () => ({
 
 export const VehicleInspectionStudio = () => {
   const { token } = useAuth();
+  const navigate = useNavigate();
+  const { bookingId } = useParams();
 
   const [stage, setStage] = useState('pickup'); // 'pickup' | 'dropoff'
   const [isSplitView, setIsSplitView] = useState(false);
@@ -95,7 +97,7 @@ export const VehicleInspectionStudio = () => {
 
     try {
       const baselinePreview = stage === 'dropoff' ? pickupAngles[angleKey]?.preview : null;
-      const result = await analyzeVehicleDamageAI(baselinePreview, targetPreview, angleKey);
+      const result = await analyzeVehicleDamageAI(baselinePreview, targetPreview, angleKey, bookingId);
 
       const isManualReview = result?.status === 'MANUAL_AUDIT_REQUIRED' || result?.requiresManualReview || result?.success === false;
 
@@ -449,15 +451,25 @@ export const VehicleInspectionStudio = () => {
             <Button
               variant="outline"
               size="lg"
+              leftIcon={ShieldAlert}
+              onClick={() => navigate(`/audit/${bookingId || 'sample'}`)}
+              className="w-full sm:w-auto px-5 py-3.5 border-amber-500/40 text-amber-300 hover:bg-amber-950/40 font-bold transition-all"
+            >
+              Escrow & Dispute Audit
+            </Button>
+
+            <Button
+              variant="outline"
+              size="lg"
               leftIcon={FileText}
               onClick={handleExportPDF}
-              className={`w-full sm:w-auto px-6 py-3.5 border-slate-700 font-bold transition-all ${
+              className={`w-full sm:w-auto px-5 py-3.5 border-slate-700 font-bold transition-all ${
                 isInspectionComplete
                   ? 'bg-slate-800 text-cyan-300 hover:bg-slate-700 hover:border-cyan-500/40'
                   : 'bg-slate-850 text-slate-400 opacity-75'
               }`}
             >
-              Export Inspection PDF ({completedSlots.length}/4)
+              Export PDF ({completedSlots.length}/4)
             </Button>
 
             <Button
@@ -465,9 +477,9 @@ export const VehicleInspectionStudio = () => {
               size="lg"
               leftIcon={CheckCircle2}
               onClick={handleFinalizeInspection}
-              className="w-full sm:w-auto px-8 py-3.5 font-bold shadow-lg shadow-blue-600/30"
+              className="w-full sm:w-auto px-7 py-3.5 font-bold shadow-lg shadow-blue-600/30"
             >
-              {isFinalized ? 'Telemetry Contract Signed ✓' : 'Sign & Finalize Inspection'}
+              {isFinalized ? 'Contract Signed ✓' : 'Sign & Finalize'}
             </Button>
           </div>
         </div>

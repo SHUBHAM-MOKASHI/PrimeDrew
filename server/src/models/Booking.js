@@ -86,6 +86,69 @@ const bookingSchema = new mongoose.Schema(
       lat: Number,
       lng: Number,
       updatedAt: Date
+    },
+
+    // =========================================================================
+    // Manual Audit, Escrow Hold & Dispute Resolution Subsystem
+    // =========================================================================
+    inspectionStatus: {
+      type: String,
+      enum: ['PENDING', 'PASSED_PRISTINE', 'DAMAGE_DETECTED', 'MANUAL_AUDIT_REQUIRED'],
+      default: 'PENDING'
+    },
+    escrowStatus: {
+      type: String,
+      enum: ['HELD', 'RELEASED_TO_RENTER', 'TRANSFERRED_TO_HOST', 'DISPUTED'],
+      default: 'HELD'
+    },
+    securityDepositAmount: {
+      type: Number,
+      default: 5000
+    },
+    preImageUrl: {
+      type: String,
+      default: null
+    },
+    postImageUrl: {
+      type: String,
+      default: null
+    },
+    detections: [
+      {
+        label: { type: String, required: true },
+        confidence: { type: Number, required: true },
+        box: {
+          ymin: { type: Number, required: true },
+          xmin: { type: Number, required: true },
+          ymax: { type: Number, required: true },
+          xmax: { type: Number, required: true }
+        }
+      }
+    ],
+    dispute: {
+      isDisputed: {
+        type: Boolean,
+        default: false
+      },
+      disputedBy: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User'
+      },
+      renterReason: {
+        type: String,
+        trim: true
+      },
+      hostDecision: {
+        type: String,
+        enum: ['PENDING', 'ACCEPTED_DAMAGE', 'DISMISSED_DIRT_GLARE', 'RESOLVED_SPLIT'],
+        default: 'PENDING'
+      },
+      disputeDeadline: {
+        type: Date
+      },
+      resolvedAt: {
+        type: Date
+      }
     }
   },
   {

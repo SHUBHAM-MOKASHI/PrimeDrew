@@ -265,21 +265,13 @@ export const KYCModal = ({ isOpen, onClose }) => {
 
         const authToken = token || localStorage.getItem('token') || localStorage.getItem('primedrew_token');
 
-        let response;
-        try {
-          response = await axios.post('/api/v1/kyc/extract-id', formDataObj, {
-            headers: {
-              'Content-Type': 'multipart/form-data',
-              Authorization: authToken ? `Bearer ${authToken}` : ''
-            },
-            timeout: 8000
-          });
-        } catch {
-          response = await axios.post('http://localhost:8000/api/v1/ai/extract-id', formDataObj, {
-            headers: { 'Content-Type': 'multipart/form-data' },
-            timeout: 8000
-          });
-        }
+        const response = await axios.post('/api/v1/kyc/extract-id', formDataObj, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+            Authorization: authToken ? `Bearer ${authToken}` : ''
+          },
+          timeout: 15000
+        });
 
         if (response?.data) {
           const d = response.data.ocr_data || response.data.data || response.data;
@@ -425,23 +417,17 @@ export const KYCModal = ({ isOpen, onClose }) => {
           headers: {
             'Content-Type': 'multipart/form-data',
             Authorization: authToken ? `Bearer ${authToken}` : ''
-          }
+          },
+          timeout: 30000
         });
         resData = response.data;
       } catch (backendErr) {
-        try {
-          const directAi = await axios.post('http://localhost:8000/api/v1/ai/verify-face', payload, {
-            headers: { 'Content-Type': 'multipart/form-data' }
-          });
-          resData = directAi.data;
-        } catch {
-          const msg =
-            backendErr.response?.data?.message ||
-            backendErr.response?.data?.error ||
-            backendErr.message ||
-            'Face verification service unavailable.';
-          throw msg;
-        }
+        const msg =
+          backendErr.response?.data?.message ||
+          backendErr.response?.data?.error ||
+          backendErr.message ||
+          'Face verification service temporarily unavailable.';
+        throw msg;
       }
 
       setIsVerifying(false);

@@ -8,7 +8,7 @@ import { createBooking } from '../../services/bookingService';
 import TripHandoverModal from './TripHandoverModal';
 
 export const BookingCheckoutDrawer = ({ isOpen, onClose, vehicle }) => {
-  const { user, token, kycStatus, openAuthModal } = useAuth();
+  const { user, token, kycStatus, openAuthModal, openKycModal } = useAuth();
 
   const [startDate, setStartDate] = useState(
     new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString().slice(0, 16)
@@ -38,14 +38,16 @@ export const BookingCheckoutDrawer = ({ isOpen, onClose, vehicle }) => {
   const platformFee = Math.round(baseFare * 0.10);
   const totalPayable = baseFare + securityDeposit + platformFee;
 
+  const isUserKycVerified = user?.isKycVerified || user?.kycStatus === 'verified' || kycStatus === 'verified';
+
   const handleConfirmBooking = async () => {
-    if (!token) {
+    if (!token || !user) {
       openAuthModal('renter');
       return;
     }
 
-    if (kycStatus !== 'verified') {
-      openAuthModal('renter');
+    if (!isUserKycVerified) {
+      openKycModal();
       return;
     }
 
@@ -117,7 +119,7 @@ export const BookingCheckoutDrawer = ({ isOpen, onClose, vehicle }) => {
                 View 6-Digit Handover Code & Trip HUD
               </Button>
               <Button variant="outline" onClick={onClose} className="w-full py-2.5 border-zinc-800">
-                Done & Return to Fleet
+                Done & Return to Vehicles
               </Button>
             </div>
           </div>
@@ -138,6 +140,36 @@ export const BookingCheckoutDrawer = ({ isOpen, onClose, vehicle }) => {
               </span>
             </div>
           </div>
+
+          {/* Auto-filled Renter Profile Snapshot from Active Session */}
+          {user && (
+            <div className="bg-zinc-900/60 border border-zinc-800/80 rounded-2xl p-3.5 space-y-2 text-xs">
+              <div className="flex items-center justify-between">
+                <span className="font-bold text-zinc-400 uppercase tracking-wider text-[10px]">
+                  Renter Profile (Auto-filled)
+                </span>
+                {isUserKycVerified ? (
+                  <span className="text-[10px] font-bold text-emerald-400 flex items-center gap-1 bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-500/30">
+                    <ShieldCheck className="w-3 h-3 text-emerald-400" /> KYC Verified
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-bold text-amber-400 flex items-center gap-1 bg-amber-950/60 px-2 py-0.5 rounded-full border border-amber-500/30">
+                    KYC Required
+                  </span>
+                )}
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-zinc-200">
+                <div>
+                  <span className="text-[10px] text-zinc-500 block">Name</span>
+                  <span className="font-semibold text-zinc-100">{user.fullName || user.name || 'Verified Driver'}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] text-zinc-500 block">Phone</span>
+                  <span className="font-semibold text-zinc-100">{user.phone || '+91 ••••• •••••'}</span>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Date Pickers */}
           <div className="grid grid-cols-2 gap-3">
@@ -188,14 +220,14 @@ export const BookingCheckoutDrawer = ({ isOpen, onClose, vehicle }) => {
           </div>
 
           {/* Progressive KYC Status Alert */}
-          {kycStatus !== 'verified' ? (
+          {!isUserKycVerified ? (
             <div className="bg-amber-950/40 border border-amber-500/40 rounded-2xl p-4 text-xs text-amber-200 space-y-2">
               <div className="flex items-start gap-2">
                 <Info className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
                 <div>
                   <span className="font-bold block text-amber-100">Identity Verification Required</span>
                   <p className="text-zinc-400 leading-snug mt-0.5">
-                    Your KYC is currently unverified. Complete 60-second DL OCR and live selfie match before checkout.
+                    Please complete one-time Biometric KYC to proceed with vehicle booking.
                   </p>
                 </div>
               </div>
@@ -203,7 +235,13 @@ export const BookingCheckoutDrawer = ({ isOpen, onClose, vehicle }) => {
                 variant="outline"
                 size="sm"
                 leftIcon={Sparkles}
-                onClick={() => openAuthModal('renter')}
+                onClick={() => {
+                  if (!token || !user) {
+                    openAuthModal('renter');
+                  } else {
+                    openKycModal();
+                  }
+                }}
                 className="w-full bg-zinc-900 border-amber-500/40 text-amber-300 hover:bg-amber-950/50 justify-center"
               >
                 Verify ID & Selfie Now

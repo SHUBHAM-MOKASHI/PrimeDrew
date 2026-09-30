@@ -9,9 +9,9 @@ import VehicleDiscovery from './pages/VehicleDiscovery';
 import VehicleDetailsPage from './pages/VehicleDetailsPage';
 import HostDashboardPage from './pages/HostDashboardPage';
 import ListVehicle from './pages/host/ListVehicle';
-import InspectionPage from './pages/InspectionPage';
 import VehicleInspectionStudio from './components/studio/VehicleInspectionStudio';
 import AdminDashboard from './pages/AdminDashboard';
+import InspectionAudit from './pages/InspectionAudit';
 import HostApplicationModal from './components/host/HostApplicationModal';
 
 export function AppContent() {
@@ -44,6 +44,12 @@ export function AppContent() {
           <Route path="/ai-studio" element={<VehicleInspectionStudio />} />
           <Route path="/studio" element={<VehicleInspectionStudio />} />
           <Route path="/damage-studio" element={<VehicleInspectionStudio />} />
+
+          {/* Escrow Hold, Manual Audit & Dispute Resolution Routes */}
+          <Route path="/audit/:bookingId" element={<InspectionAudit />} />
+          <Route path="/audit" element={<InspectionAudit />} />
+          <Route path="/inspection/:bookingId/audit" element={<InspectionAudit />} />
+          <Route path="/dispute/:bookingId" element={<InspectionAudit />} />
           
           <Route path="/host" element={<HostDashboardPage />} />
           <Route path="/host/list-vehicle" element={<ListVehicle />} />

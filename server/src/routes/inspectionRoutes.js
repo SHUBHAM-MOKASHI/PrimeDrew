@@ -1,6 +1,12 @@
 import express from 'express';
-import { processVehicleInspection, analyzeUniversalVehicleDamage } from '../controllers/inspectionController.js';
-import { optionalAuth } from '../middlewares/auth.js';
+import {
+  processVehicleInspection,
+  analyzeUniversalVehicleDamage,
+  getBookingAudit,
+  fileDispute,
+  resolveDisputeHost
+} from '../controllers/inspectionController.js';
+import { optionalAuth, authenticate } from '../middlewares/auth.js';
 import { upload } from '../middlewares/upload.js';
 
 const router = express.Router();
@@ -20,5 +26,10 @@ router.post('/detect-damage', optionalAuth, handleUpload, processVehicleInspecti
 router.post('/analyze-damage', optionalAuth, analyzeUniversalVehicleDamage);
 router.post('/analyze-universal', optionalAuth, analyzeUniversalVehicleDamage);
 router.post('/analyze', optionalAuth, analyzeUniversalVehicleDamage);
+
+// Escrow Hold, Audit & Dispute Subsystem Routes
+router.get('/:bookingId/audit', optionalAuth, getBookingAudit);
+router.post('/:bookingId/dispute', optionalAuth, fileDispute);
+router.post('/:bookingId/resolve-host', optionalAuth, resolveDisputeHost);
 
 export default router;

@@ -1,15 +1,17 @@
-'use client';
-
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ShieldCheck, Zap, Star, ChevronRight, Sparkles } from 'lucide-react';
 import Button from '../components/common/Button';
 import ThreeM4Experience from '../components/home/ThreeM4Experience';
+import BookingCheckoutDrawer from '../components/booking/BookingCheckoutDrawer';
+import ErrorBoundary from '../components/common/ErrorBoundary';
 import { useAuth } from '../context/AuthContext';
 
 export const Home = () => {
   const navigate = useNavigate();
-  const { openAuthModal } = useAuth();
+  const { user, token, kycStatus, openAuthModal, openKycModal } = useAuth();
+  const [selectedVehicle, setSelectedVehicle] = useState(null);
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
 
   const categories = [
     { name: 'SUVs & Cruisers', tag: 'Spacious & All-Terrain', count: '120+ Vehicles', image: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&q=80&w=600', query: 'SUV' },
@@ -60,6 +62,37 @@ export const Home = () => {
     }
   ];
 
+  const handleBookClick = (e, vehicle) => {
+    e.stopPropagation();
+    // Case A: User is NOT logged in -> Open standard Login / Auth modal
+    if (!token || !user) {
+      openAuthModal('renter');
+      return;
+    }
+
+    // Case B: User is LOGGED IN but KYC is NOT verified -> Open Biometric KYC Verification Modal directly
+    const isVerified = user?.isKycVerified || user?.kycStatus === 'verified' || kycStatus === 'verified';
+    if (!isVerified) {
+      openKycModal();
+      return;
+    }
+
+    // Case C: User is LOGGED IN and KYC is VERIFIED -> Open Direct Booking / Checkout modal
+    setSelectedVehicle({
+      ...vehicle,
+      _id: vehicle.id || vehicle._id,
+      baseDailyRate: vehicle.dailyRate || vehicle.baseDailyRate || 2500,
+      baseHourlyRate: vehicle.hourlyRate || vehicle.baseHourlyRate || 300,
+      pricing: {
+        baseDailyRate: vehicle.dailyRate || 2500,
+        baseHourlyRate: vehicle.hourlyRate || 300,
+        securityDeposit: 2500
+      },
+      images: vehicle.image ? [vehicle.image] : vehicle.images
+    });
+    setIsCheckoutOpen(true);
+  };
+
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-b from-[#030712] via-[#080d1a] to-[#020617] text-slate-100">
       
@@ -89,7 +122,7 @@ export const Home = () => {
               onClick={() => navigate('/vehicles')}
               className="self-start sm:self-auto bg-slate-900/80 border border-slate-700 text-slate-200 hover:text-white hover:border-cyan-500 hover:bg-cyan-950/40 transition-all text-xs font-semibold px-4 py-2 rounded-full backdrop-blur-md inline-flex items-center gap-1.5 cursor-pointer shadow-md"
             >
-              <span>View All Fleet</span>
+              <span>Browse Vehicles</span>
               <ChevronRight className="w-3.5 h-3.5 text-cyan-400" />
             </button>
           </div>
@@ -144,7 +177,7 @@ export const Home = () => {
               onClick={() => navigate('/vehicles')}
               className="self-start sm:self-auto bg-slate-900/80 border border-slate-700 text-slate-200 hover:text-white hover:border-blue-500 hover:bg-blue-950/40 transition-all text-xs font-semibold px-4 py-2 rounded-full backdrop-blur-md inline-flex items-center gap-1.5 cursor-pointer shadow-md"
             >
-              <span>Browse All Fleet</span>
+              <span>Browse Vehicles</span>
               <ChevronRight className="w-3.5 h-3.5 text-blue-400" />
             </button>
           </div>
@@ -189,13 +222,10 @@ export const Home = () => {
                       <span className="text-xs text-slate-400"> / day</span>
                     </div>
                     <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        openAuthModal('renter');
-                      }}
+                      onClick={(e) => handleBookClick(e, v)}
                       className="bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white font-bold text-xs px-4 py-2 shadow-lg shadow-blue-600/30 rounded-xl active:scale-95 transition-all cursor-pointer"
                     >
-                      Reserve
+                      Book Vehicle
                     </button>
                   </div>
                 </div>
@@ -233,6 +263,19 @@ export const Home = () => {
         </div>
       </section>
 
+      {/* Direct Booking Modal */}
+      <ErrorBoundary>
+        {selectedVehicle && (
+          <BookingCheckoutDrawer
+            isOpen={isCheckoutOpen}
+            onClose={() => {
+              setIsCheckoutOpen(false);
+              setSelectedVehicle(null);
+            }}
+            vehicle={selectedVehicle}
+          />
+        )}
+      </ErrorBoundary>
     </div>
   );
 };
