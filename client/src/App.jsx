@@ -14,6 +14,7 @@ import VehicleInspectionStudio from './components/studio/VehicleInspectionStudio
 import AdminDashboard from './pages/AdminDashboard';
 import InspectionAudit from './pages/InspectionAudit';
 import HostApplicationModal from './components/host/HostApplicationModal';
+import TripsPage from './pages/TripsPage';
 
 export function AppContent() {
   const { isKycModalOpen, closeKycModal, isHostModalOpen, closeHostModal } = useAuth();
@@ -36,6 +37,10 @@ export function AppContent() {
           <Route path="/vehicles" element={<VehicleDiscovery />} />
           <Route path="/vehicles/:id" element={<VehicleDetailsPage />} />
           <Route path="/vehicle/:id" element={<VehicleDetailsPage />} />
+          
+          {/* Trips & Escrow Bookings */}
+          <Route path="/trips" element={<TripsPage />} />
+          <Route path="/bookings" element={<TripsPage />} />
           
           {/* AI Inspection Studio Routes */}
           <Route path="/inspections" element={<VehicleInspectionStudio />} />

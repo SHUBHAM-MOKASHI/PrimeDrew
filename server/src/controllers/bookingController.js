@@ -9,10 +9,28 @@ import { redisAcquireLock, redisDel } from '../config/redis.js';
  * @access  Private (Renter)
  */
 export const createBooking = async (req, res, next) => {
-  const { vehicleId, startDate, endDate } = req.body;
+  const vehicleId = req.body.vehicleId || req.body.vehicle;
+  const startDate = req.body.startDate || req.body.pickupDate;
+  const endDate = req.body.endDate || req.body.dropoffDate;
 
-  // 1. User KYC verification check
-  if (req.user.kyc?.status !== 'verified') {
+  if (!vehicleId) {
+    return res.status(400).json({
+      success: false,
+      message: 'vehicleId is required.'
+    });
+  }
+
+  // 1. User KYC verification check (support isKycVerified, status in kyc or kycStatus, and admin overrides)
+  const isKycApproved =
+    req.user.isKycVerified === true ||
+    req.user.kyc?.status === 'verified' ||
+    req.user.kyc?.status === 'VERIFIED' ||
+    req.user.kycStatus === 'verified' ||
+    req.user.kycStatus === 'VERIFIED' ||
+    req.user.role === 'ADMIN' ||
+    req.user.role === 'admin';
+
+  if (!isKycApproved) {
     return res.status(403).json({
       success: false,
       message: 'KYC Verification Required. User KYC status must be verified before booking a vehicle.'

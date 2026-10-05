@@ -50,18 +50,18 @@ export const VehicleGallery = ({
   return (
     <div className={`space-y-3 ${className}`}>
       
-      {/* 1. Main Feature Image Stage */}
-      <div className="relative aspect-[16/9] w-full rounded-3xl overflow-hidden border border-slate-800 shadow-2xl shadow-black/80 bg-slate-950 group">
+      {/* 1. Main Feature Image Stage (Sleek Dark Studio Framing) */}
+      <div className="relative w-full max-h-[520px] lg:max-h-[580px] aspect-[16/10] md:aspect-[16/9] rounded-2xl bg-[#080c16] border border-cyan-500/15 overflow-hidden flex items-center justify-center shadow-2xl shadow-black/80 group">
         
-        {/* Main High-Res Image */}
+        {/* Main High-Res Image with Balanced Framing */}
         <img
           src={activeImage}
           alt={`${title} - Angle ${activeImageIndex + 1}`}
-          className="w-full h-full object-cover transition-all duration-300 group-hover:scale-[1.02]"
+          className="w-full h-full object-contain md:object-cover object-center rounded-2xl transition-all duration-300 group-hover:scale-[1.01]"
         />
 
         {/* Ambient Dark Gradient Vignette */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-black/30 pointer-events-none" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/10 to-black/30 pointer-events-none rounded-2xl" />
 
         {/* Top-Left Verified Host Listing Badge */}
         {isVerified && (
