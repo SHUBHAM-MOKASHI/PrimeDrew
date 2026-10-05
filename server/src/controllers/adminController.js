@@ -423,3 +423,31 @@ export const rejectVehicleListing = async (req, res, next) => {
     next(error);
   }
 };
+
+/**
+ * @desc    Delete vehicle listing permanently
+ * @route   DELETE /api/v1/admin/vehicles/:vehicleId
+ * @access  Private (Admin Only)
+ */
+export const deleteAdminVehicle = async (req, res, next) => {
+  try {
+    const { vehicleId } = req.params;
+    const vehicle = await Vehicle.findById(vehicleId);
+
+    if (!vehicle) {
+      return res.status(404).json({
+        success: false,
+        message: 'Vehicle not found.'
+      });
+    }
+
+    await vehicle.deleteOne();
+
+    res.status(200).json({
+      success: true,
+      message: `Vehicle ${vehicle.title || ''} deleted permanently.`
+    });
+  } catch (error) {
+    next(error);
+  }
+};

@@ -5,7 +5,9 @@ import { Canvas } from '@react-three/fiber';
 import { useGLTF, Environment, ContactShadows, OrbitControls, Html } from '@react-three/drei';
 import * as THREE from 'three';
 import { useNavigate } from 'react-router-dom';
-import { Zap, Gauge, ShieldCheck, Cpu, MapPin, Calendar, Search, Sparkles } from 'lucide-react';
+import { MapPin, Calendar, Search } from 'lucide-react';
+import PrimeDrewParticleTitle from '../PrimeDrewParticleTitle';
+import PerspectiveGrid from '../PerspectiveGrid';
 
 /**
  * Clean BMW M4 Model Component
@@ -74,122 +76,109 @@ function ShowroomPedestal() {
 }
 
 /**
- * Main ThreeM4Experience Component
- * Deep Blue & Obsidian Black Showroom Theme with circular illuminated pedestal
+ * Centered 3D Car Model Viewer Component
+ */
+export function CarViewer() {
+  return (
+    <Canvas
+      className="w-full h-full"
+      camera={{ position: [0, 1.8, 7.6], fov: 36 }}
+      gl={{
+        antialias: true,
+        powerPreference: 'high-performance',
+        toneMapping: THREE.ACESFilmicToneMapping,
+        outputColorSpace: THREE.SRGBColorSpace,
+      }}
+    >
+      {/* Studio Lighting Setup */}
+      <ambientLight intensity={1.2} />
+      <directionalLight
+        position={[10, 15, 10]}
+        intensity={2.4}
+        castShadow
+        shadow-mapSize={[2048, 2048]}
+        shadow-bias={-0.0001}
+      />
+      <directionalLight position={[-10, 10, -5]} intensity={1.2} color="#38bdf8" />
+      <spotLight position={[0, 14, 0]} intensity={1.8} angle={0.6} penumbra={1} color="#60a5fa" />
+
+      <Environment preset="city" environmentIntensity={0.7} />
+
+      {/* Circular Showroom Platform */}
+      <ShowroomPedestal />
+
+      {/* 3D Car Model */}
+      <Suspense
+        fallback={
+          <Html center>
+            <div className="flex items-center gap-3 px-5 py-3 rounded-2xl bg-slate-900/90 backdrop-blur-xl border border-cyan-500/30 shadow-[0_0_25px_rgba(56,189,248,0.2)] text-white font-semibold text-xs animate-pulse whitespace-nowrap">
+              <div className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping" />
+              Illuminating Showroom Stage...
+            </div>
+          </Html>
+        }
+      >
+        <M4Car />
+      </Suspense>
+
+      {/* Soft Ground Contact Shadows */}
+      <ContactShadows
+        position={[0, -0.47, 0]}
+        opacity={0.75}
+        scale={12}
+        blur={1.8}
+        far={4}
+        color="#020617"
+      />
+
+      {/* Smooth Auto-Rotation & 360 Inspection */}
+      <OrbitControls
+        enableZoom={false}
+        enablePan={false}
+        autoRotate={true}
+        autoRotateSpeed={0.7}
+        maxPolarAngle={Math.PI / 2.05}
+        minPolarAngle={Math.PI / 3.6}
+      />
+    </Canvas>
+  );
+}
+
+/**
+ * Main Hero Experience Component
+ * Balanced Vertical Stack: PrimeDrew Particle Branding + 3D Car Viewer + Search Dock
  */
 export default function ThreeM4Experience() {
   const navigate = useNavigate();
 
   return (
-    <div className="relative w-full min-h-screen bg-gradient-to-b from-slate-950 via-[#070d1d] to-slate-950 overflow-hidden pt-6 pb-10 flex flex-col justify-between items-center text-slate-100 selection:bg-cyan-500 selection:text-black">
+    <section className="relative w-full h-[90vh] md:h-[94vh] min-h-[92vh] flex items-center justify-center overflow-hidden bg-[#05070d] text-slate-100 selection:bg-cyan-500 selection:text-black">
+      {/* LAYER 0: 3D Perspective Grid Background (Behind all elements) */}
+      <PerspectiveGrid className="z-0 opacity-70" fadeRadius={75} gridSize={32} />
+
       {/* Background Ambient Radial Glow */}
       <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[700px] h-[350px] bg-cyan-500/10 blur-[130px] rounded-full" />
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 w-[900px] h-[450px] bg-blue-600/10 blur-[150px] rounded-full" />
       </div>
 
-      {/* Top Header Section */}
-      <div className="relative z-10 text-center px-4 max-w-3xl mx-auto mt-2">
-        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-cyan-950/60 border border-cyan-500/30 backdrop-blur-xl text-cyan-400 text-xs font-semibold uppercase tracking-wider mb-2.5 shadow-[0_0_15px_rgba(56,189,248,0.2)]">
-          <Sparkles className="w-3.5 h-3.5 text-cyan-400 animate-pulse" />
-          2024 BMW M4 Competition Coupe • Showroom Edition
-        </div>
-        <h1 className="text-4xl sm:text-5xl font-extrabold text-white tracking-tight leading-tight">
-          Precision Performance <span className="text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-blue-400 to-indigo-400">On Demand</span>
-        </h1>
-        <p className="mt-2 text-slate-400 text-sm sm:text-base font-medium">
-          Drag to inspect 360° • Instant smartphone keyless unlock • Biometric AI Fleet
-        </p>
-      </div>
-
-      {/* 3D Canvas Stage */}
-      <div className="relative z-10 w-full h-[54vh] sm:h-[58vh] my-auto">
-        <Canvas
-          className="w-full h-full"
-          camera={{ position: [0, 1.8, 7.6], fov: 36 }}
-          gl={{
-            antialias: true,
-            powerPreference: 'high-performance',
-            toneMapping: THREE.ACESFilmicToneMapping,
-            outputColorSpace: THREE.SRGBColorSpace,
-          }}
-        >
-          {/* Studio Lighting Setup */}
-          <ambientLight intensity={1.2} />
-          <directionalLight
-            position={[10, 15, 10]}
-            intensity={2.4}
-            castShadow
-            shadow-mapSize={[2048, 2048]}
-            shadow-bias={-0.0001}
-          />
-          <directionalLight position={[-10, 10, -5]} intensity={1.2} color="#38bdf8" />
-          <spotLight position={[0, 14, 0]} intensity={1.8} angle={0.6} penumbra={1} color="#60a5fa" />
-
-          <Environment preset="city" environmentIntensity={0.7} />
-
-          {/* Circular Showroom Platform */}
-          <ShowroomPedestal />
-
-          {/* 3D Car Model */}
-          <Suspense
-            fallback={
-              <Html center>
-                <div className="flex items-center gap-3 px-5 py-3 rounded-2xl bg-slate-900/90 backdrop-blur-xl border border-cyan-500/30 shadow-[0_0_25px_rgba(56,189,248,0.2)] text-white font-semibold text-xs animate-pulse whitespace-nowrap">
-                  <div className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping" />
-                  Illuminating Showroom Stage...
-                </div>
-              </Html>
-            }
-          >
-            <M4Car />
-          </Suspense>
-
-          {/* Soft Ground Contact Shadows */}
-          <ContactShadows
-            position={[0, -0.47, 0]}
-            opacity={0.75}
-            scale={12}
-            blur={1.8}
-            far={4}
-            color="#020617"
-          />
-
-          {/* Smooth Auto-Rotation & 360 Inspection */}
-          <OrbitControls
-            enableZoom={false}
-            enablePan={false}
-            autoRotate={true}
-            autoRotateSpeed={0.7}
-            maxPolarAngle={Math.PI / 2.05}
-            minPolarAngle={Math.PI / 3.6}
-          />
-        </Canvas>
-
-        {/* Floating Telemetry Chips */}
-        <div className="absolute top-4 left-6 hidden md:flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-slate-900/80 backdrop-blur-xl border border-slate-800/90 shadow-xl text-slate-200 text-xs font-semibold pointer-events-none">
-          <Gauge className="w-4 h-4 text-cyan-400" />
-          <span>503 HP Twin-Turbo S58</span>
-        </div>
-
-        <div className="absolute top-4 right-6 hidden md:flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-slate-900/80 backdrop-blur-xl border border-slate-800/90 shadow-xl text-slate-200 text-xs font-semibold pointer-events-none">
-          <Zap className="w-4 h-4 text-amber-400" />
-          <span>0–100 km/h in 3.4s</span>
-        </div>
-
-        <div className="absolute bottom-4 left-6 hidden md:flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-slate-900/80 backdrop-blur-xl border border-slate-800/90 shadow-xl text-slate-200 text-xs font-semibold pointer-events-none">
-          <ShieldCheck className="w-4 h-4 text-emerald-400" />
-          <span>60s DeepFace Biometric KYC</span>
-        </div>
-
-        <div className="absolute bottom-4 right-6 hidden md:flex items-center gap-2.5 px-4 py-2.5 rounded-2xl bg-slate-900/80 backdrop-blur-xl border border-slate-800/90 shadow-xl text-slate-200 text-xs font-semibold pointer-events-none">
-          <Cpu className="w-4 h-4 text-indigo-400" />
-          <span>YOLOv8 Automated Damage Scan</span>
+      {/* Layer 1 (z-10): 3D Car Viewer - Pulled up to vertical center */}
+      <div className="absolute inset-0 w-full h-full flex items-center justify-center z-10 pointer-events-auto pt-8 md:pt-12">
+        <div className="w-full max-w-6xl h-[480px] md:h-[580px] flex items-center justify-center">
+          {/* Existing 3D Car Model / Viewer */}
+          <CarViewer />
         </div>
       </div>
 
-      {/* Floating Glassmorphic Search Dock */}
-      <div className="relative z-20 w-full max-w-4xl px-4">
+      {/* PrimeDrew Particle Title - Positioned in the upper headroom */}
+      <div className="absolute top-[2%] md:top-[4%] left-0 right-0 w-full flex items-center justify-center z-30 pointer-events-none">
+        <div className="w-full max-w-6xl h-[240px] md:h-[280px] pointer-events-auto">
+          <PrimeDrewParticleTitle />
+        </div>
+      </div>
+
+      {/* Layer 3 (z-40): Floating Glassmorphic Search Dock */}
+      <div className="absolute bottom-4 md:bottom-6 left-1/2 -translate-x-1/2 z-40 w-full max-w-4xl px-4 pointer-events-auto">
         <div className="w-full bg-slate-900/90 backdrop-blur-2xl border border-slate-800/90 rounded-3xl p-3 sm:p-4 shadow-2xl shadow-black/80 grid grid-cols-1 sm:grid-cols-4 gap-3 items-center text-white">
           <div className="flex items-center gap-3 px-3.5 py-2.5 rounded-2xl bg-slate-950/60 border border-slate-800">
             <MapPin className="w-4 h-4 text-cyan-400 shrink-0" />
@@ -236,7 +225,7 @@ export default function ThreeM4Experience() {
           </button>
         </div>
       </div>
-    </div>
+    </section>
   );
 }
 

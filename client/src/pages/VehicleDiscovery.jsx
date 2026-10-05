@@ -1,14 +1,17 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
+import { Car } from 'lucide-react';
 import HeroSearchBar from '../components/discovery/HeroSearchBar';
 import FilterBar from '../components/discovery/FilterBar';
 import VehicleCard from '../components/discovery/VehicleCard';
 import BookingCheckoutDrawer from '../components/booking/BookingCheckoutDrawer';
 import ErrorBoundary from '../components/common/ErrorBoundary';
+import Button from '../components/common/Button';
 import { getVehicles } from '../services/vehicleService';
 import { useAuth } from '../context/AuthContext';
+import axios from 'axios';
 
 export const VehicleDiscovery = () => {
   const { user, token, kycStatus, openAuthModal, openKycModal } = useAuth();
@@ -38,7 +41,7 @@ export const VehicleDiscovery = () => {
     const urlDropoff = searchParams.get('dropoffDate');
 
     if (urlCategory !== null || urlLocation !== null || urlPickup !== null || urlDropoff !== null) {
-      setFilters(prev => ({
+      setFilters((prev) => ({
         ...prev,
         category: urlCategory ?? prev.category,
         location: urlLocation ?? prev.location,
@@ -52,97 +55,40 @@ export const VehicleDiscovery = () => {
   const fetchFleet = async () => {
     setLoading(true);
     try {
+      const RAW_API_URL =
+        import.meta.env.VITE_API_URL ||
+        import.meta.env.VITE_API_BASE_URL ||
+        (typeof window !== 'undefined' && window.location.origin.includes('vercel.app')
+          ? 'https://primedrew-api.onrender.com'
+          : '');
+      const API_BASE_URL = RAW_API_URL.replace(/\/+$/, '');
+
       const params = {};
       if (filters.category && filters.category !== 'All') params.category = filters.category;
       if (filters.transmission && filters.transmission !== 'All') params.transmission = filters.transmission;
       if (filters.fuelType && filters.fuelType !== 'All') params.fuelType = filters.fuelType;
+      if (filters.seats && filters.seats !== 'Any') params.seats = filters.seats;
 
-      const response = await getVehicles(params);
-      if (response.data && response.data.length > 0) {
-        setVehicles(response.data);
-      } else {
-        useFallbackFleet();
+      let response;
+      try {
+        response = await axios.get(`${API_BASE_URL}/api/vehicles`, { params });
+      } catch {
+        response = await getVehicles(params);
       }
-    } catch {
-      useFallbackFleet();
+
+      const liveData = response?.data?.data || (Array.isArray(response?.data) ? response.data : []);
+      setVehicles(Array.isArray(liveData) ? liveData : []);
+    } catch (err) {
+      console.error('[Vehicles] Failed to fetch live vehicles from database:', err);
+      setVehicles([]);
     } finally {
       setLoading(false);
     }
   };
 
-  const useFallbackFleet = () => {
-    const mockList = [
-      {
-        _id: 'v1',
-        title: 'Tesla Model 3 Performance',
-        category: 'EV',
-        transmission: 'Automatic',
-        fuelType: 'EV',
-        baseHourlyRate: 350,
-        baseDailyRate: 4200,
-        securityDeposit: 3000,
-        hostName: 'Rahul S.',
-        rating: 4.98,
-        reviewsCount: 42,
-        specs: { seats: 5, transmission: 'Automatic', fuelType: 'EV' },
-        pricing: { baseHourlyRate: 350, baseDailyRate: 4200, securityDeposit: 3000 },
-        images: ['https://images.unsplash.com/photo-1560958089-b8a1929cea89?auto=format&fit=crop&q=80&w=600']
-      },
-      {
-        _id: 'v2',
-        title: 'Mahindra Thar 4x4 Convertible',
-        category: 'SUV',
-        transmission: 'Manual',
-        fuelType: 'Diesel',
-        baseHourlyRate: 280,
-        baseDailyRate: 3200,
-        securityDeposit: 2500,
-        hostName: 'Priya K.',
-        rating: 4.91,
-        reviewsCount: 68,
-        specs: { seats: 4, transmission: 'Manual', fuelType: 'Diesel' },
-        pricing: { baseHourlyRate: 280, baseDailyRate: 3200, securityDeposit: 2500 },
-        images: ['https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&q=80&w=600']
-      },
-      {
-        _id: 'v3',
-        title: 'BMW 3 Series M Sport',
-        category: 'Luxury',
-        transmission: 'Automatic',
-        fuelType: 'Petrol',
-        baseHourlyRate: 550,
-        baseDailyRate: 6500,
-        securityDeposit: 5000,
-        hostName: 'Anand V.',
-        rating: 4.99,
-        reviewsCount: 31,
-        specs: { seats: 5, transmission: 'Automatic', fuelType: 'Petrol' },
-        pricing: { baseHourlyRate: 550, baseDailyRate: 6500, securityDeposit: 5000 },
-        images: ['https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&q=80&w=600']
-      },
-      {
-        _id: 'v4',
-        title: 'Ather 450X Gen 3',
-        category: 'Bike',
-        transmission: 'Automatic',
-        fuelType: 'EV',
-        baseHourlyRate: 80,
-        baseDailyRate: 850,
-        securityDeposit: 1000,
-        hostName: 'Siddharth M.',
-        rating: 4.88,
-        reviewsCount: 19,
-        specs: { seats: 2, transmission: 'Automatic', fuelType: 'EV' },
-        pricing: { baseHourlyRate: 80, baseDailyRate: 850, securityDeposit: 1000 },
-        images: ['https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&q=80&w=600']
-      }
-    ];
-    setVehicles(mockList);
-  };
-
   useEffect(() => {
     fetchFleet();
-  }, [filters.category, filters.transmission, filters.fuelType]);
+  }, [filters.category, filters.transmission, filters.fuelType, filters.seats]);
 
   const handleFilterChange = (key, value) => {
     setFilters((prev) => ({ ...prev, [key]: value }));
@@ -157,7 +103,9 @@ export const VehicleDiscovery = () => {
       evOnly: false,
       verifiedOnly: false,
       priceRange: 10000,
-      location: 'Mumbai, MH'
+      location: 'Mumbai, MH',
+      pickupDate: '',
+      dropoffDate: ''
     });
   };
 
@@ -181,9 +129,35 @@ export const VehicleDiscovery = () => {
   };
 
   const filteredList = vehicles.filter((v) => {
-    if (filters.evOnly && v.category !== 'EV' && v.fuelType !== 'EV' && v.specs?.fuelType !== 'EV') return false;
-    if (filters.transmission !== 'All' && v.transmission !== filters.transmission && v.specs?.transmission !== filters.transmission) return false;
-    if (filters.fuelType !== 'All' && v.fuelType !== filters.fuelType && v.specs?.fuelType !== filters.fuelType) return false;
+    if (filters.category && filters.category !== 'All') {
+      const cat = (v.category || '').toLowerCase();
+      const targetCat = filters.category.toLowerCase();
+      if (!cat.includes(targetCat) && targetCat !== cat) return false;
+    }
+    if (filters.evOnly) {
+      const isEv =
+        (v.category || '').toUpperCase() === 'EV' ||
+        (v.fuelType || '').toUpperCase() === 'EV' ||
+        (v.specs?.fuelType || '').toUpperCase() === 'EV';
+      if (!isEv) return false;
+    }
+    if (filters.transmission !== 'All') {
+      const trans = (v.transmission || v.specs?.transmission || '').toLowerCase();
+      if (trans !== filters.transmission.toLowerCase()) return false;
+    }
+    if (filters.fuelType !== 'All') {
+      const fuel = (v.fuelType || v.specs?.fuelType || '').toLowerCase();
+      if (fuel !== filters.fuelType.toLowerCase()) return false;
+    }
+    if (filters.seats !== 'Any') {
+      const requiredSeats = parseInt(filters.seats, 10);
+      const vehicleSeats = Number(v.seats || v.specs?.seats || 0);
+      if (vehicleSeats && vehicleSeats < requiredSeats) return false;
+    }
+    if (filters.priceRange) {
+      const daily = Number(v.pricing?.baseDailyRate || v.baseDailyRate || v.dailyRate || 0);
+      if (daily && daily > filters.priceRange) return false;
+    }
     return true;
   });
 
@@ -225,6 +199,26 @@ export const VehicleDiscovery = () => {
                   <div className="h-4 bg-slate-800 rounded w-1/2" />
                 </div>
               ))}
+            </div>
+          ) : vehicles.length === 0 ? (
+            /* Sleek Dark-themed Zero State when no vehicles exist in MongoDB */
+            <div className="bg-slate-950/80 border border-slate-800/80 rounded-3xl p-12 text-center max-w-xl mx-auto shadow-2xl shadow-black space-y-6 backdrop-blur-xl">
+              <div className="w-16 h-16 rounded-2xl bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 mx-auto flex items-center justify-center">
+                <Car className="w-8 h-8" />
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-xl sm:text-2xl font-extrabold text-white">No vehicles listed yet</h3>
+                <p className="text-sm text-slate-400">
+                  Be the first to list a car on PrimeDrew!
+                </p>
+              </div>
+              <div>
+                <Link to="/host/list-vehicle">
+                  <Button variant="primary" className="py-3 px-6 text-sm font-bold shadow-lg shadow-cyan-950/50">
+                    + List Vehicle
+                  </Button>
+                </Link>
+              </div>
             </div>
           ) : filteredList.length === 0 ? (
             <div className="bg-slate-900/80 rounded-3xl p-12 text-center border border-slate-800 shadow-2xl shadow-black space-y-3">

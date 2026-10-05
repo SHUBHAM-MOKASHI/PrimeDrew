@@ -26,45 +26,11 @@ export const VehicleDetailsPage = () => {
         const response = await getVehicleById(id);
         if (response.data) {
           setVehicle(response.data);
+        } else {
+          setVehicle(null);
         }
       } catch {
-        // Fallback mock vehicle if backend not connected
-        setVehicle({
-          _id: id,
-          title: 'Tesla Model 3 Performance',
-          make: 'Tesla',
-          model: 'Model 3',
-          year: 2024,
-          category: 'EV',
-          plateNumber: 'MH-02-EV-9821',
-          specs: {
-            transmission: 'Automatic',
-            fuelType: 'EV',
-            seats: 5,
-            mileageKm: 12500
-          },
-          pricing: {
-            baseHourlyRate: 350,
-            baseDailyRate: 4200,
-            securityDeposit: 3000
-          },
-          location: {
-            address: 'Bandra West, Hill Road, Mumbai',
-            coordinates: [72.83, 19.05]
-          },
-          images: [
-            'https://images.unsplash.com/photo-1560958089-b8a1929cea89?auto=format&fit=crop&q=80&w=1000',
-            'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&q=80&w=1000',
-            'https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&q=80&w=1000'
-          ],
-          host: {
-            name: 'Rahul Sharma',
-            createdAt: '2023-05-10',
-            kyc: { status: 'verified' }
-          },
-          status: 'available',
-          verificationStatus: 'approved'
-        });
+        setVehicle(null);
       } finally {
         setLoading(false);
       }

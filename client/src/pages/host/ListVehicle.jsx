@@ -241,10 +241,10 @@ export const ListVehicle = () => {
       };
 
       await createVehicle(payload, authToken);
-      setSuccessToast('Vehicle submitted successfully! Sent to Admin Verification Desk.');
+      setSuccessToast('Vehicle listed successfully! Published directly to marketplace.');
       setTimeout(() => {
-        navigate('/host');
-      }, 1500);
+        navigate('/vehicles');
+      }, 1200);
     } catch (err) {
       const msg = err.response?.data?.message || err.message || 'Failed to submit vehicle. Please verify input fields.';
       setError(msg);

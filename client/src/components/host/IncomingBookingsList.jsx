@@ -8,37 +8,7 @@ import { useAuth } from '../../context/AuthContext';
 export const IncomingBookingsList = () => {
   const { token } = useAuth();
 
-  const [requests, setRequests] = useState([
-    {
-      _id: 'b101',
-      id: 'b101',
-      renterName: 'Vikram Mehta',
-      renter: { name: 'Vikram Mehta', phone: '+91 98201 12345', kyc: { status: 'verified' } },
-      renterKyc: 'verified',
-      vehicleTitle: 'Tesla Model 3 Performance',
-      vehicle: { title: 'Tesla Model 3 Performance', plateNumber: 'MH-02-EV-9821' },
-      dates: '24 Aug - 27 Aug 2026 (3 Days)',
-      totalPayout: 11340,
-      pricingBreakdown: { totalAmount: 12600 },
-      tripStatus: 'confirmed',
-      paymentStatus: 'escrow_locked'
-    },
-    {
-      _id: 'b102',
-      id: 'b102',
-      renterName: 'Ananya Roy',
-      renter: { name: 'Ananya Roy', phone: '+91 97110 54321', kyc: { status: 'verified' } },
-      renterKyc: 'verified',
-      vehicleTitle: 'Mahindra Thar 4x4 Convertible',
-      vehicle: { title: 'Mahindra Thar 4x4 Convertible', plateNumber: 'MH-12-TH-4410' },
-      dates: '28 Aug - 29 Aug 2026 (1 Day)',
-      totalPayout: 3150,
-      pricingBreakdown: { totalAmount: 3500 },
-      tripStatus: 'requested',
-      paymentStatus: 'pending'
-    }
-  ]);
-
+  const [requests, setRequests] = useState([]);
   const [selectedHandoverBooking, setSelectedHandoverBooking] = useState(null);
   const [isHandoverModalOpen, setIsHandoverModalOpen] = useState(false);
 
@@ -47,11 +17,10 @@ export const IncomingBookingsList = () => {
       if (!token) return;
       try {
         const res = await getHostBookings(token);
-        if (res.data && res.data.length > 0) {
-          setRequests(res.data);
-        }
+        const liveList = res?.data || (Array.isArray(res) ? res : []);
+        setRequests(Array.isArray(liveList) ? liveList : []);
       } catch {
-        // Fallback to sample data
+        setRequests([]);
       }
     };
     fetchBookings();

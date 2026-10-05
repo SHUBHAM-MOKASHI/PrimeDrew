@@ -23,7 +23,16 @@ const generateToken = (userId, role = 'renter') => {
  */
 const sendTokenResponse = (user, statusCode, res, message) => {
   const userRole = user.role || user.roles?.[0] || 'USER';
-  const token = generateToken(user._id, userRole);
+  const userObj = user.toObject ? user.toObject() : { ...user };
+  delete userObj.password;
+
+  const isUserAdmin =
+    userRole.toUpperCase() === 'ADMIN' ||
+    userRole.toUpperCase() === 'SUPERADMIN' ||
+    isMasterAdminPhone(userObj.phone || user.phone);
+
+  const finalRole = isUserAdmin ? 'ADMIN' : userRole;
+  const token = generateToken(user._id, finalRole);
 
   const cookieOptions = {
     expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
@@ -32,17 +41,24 @@ const sendTokenResponse = (user, statusCode, res, message) => {
     sameSite: 'lax'
   };
 
-  const userObj = user.toObject ? user.toObject() : { ...user };
-  delete userObj.password;
+  const resolvedName = isUserAdmin
+    ? (userObj.name && !userObj.name.startsWith('User') ? userObj.name : 'Shubham')
+    : (userObj.name || (userObj.phone ? `User ${userObj.phone.slice(-4)}` : 'User'));
+  const resolvedFullName = isUserAdmin
+    ? (userObj.fullName && !userObj.fullName.startsWith('User') ? userObj.fullName : 'Shubham')
+    : (userObj.fullName || resolvedName);
 
-  const kycStatus = userObj.kycStatus || userObj.kyc?.status || 'pending';
-  const isKycVerified = userObj.isKycVerified || kycStatus === 'verified';
+  const kycStatus = isUserAdmin ? 'verified' : (userObj.kycStatus || userObj.kyc?.status || 'pending');
+  const isKycVerified = isUserAdmin || userObj.isKycVerified || kycStatus === 'verified';
   userObj.id = user._id;
   userObj._id = user._id;
-  userObj.role = userRole;
+  userObj.name = resolvedName;
+  userObj.fullName = resolvedFullName;
+  userObj.role = isUserAdmin ? 'ADMIN' : userRole;
+  userObj.roles = isUserAdmin ? ['ADMIN', 'HOST', 'USER'] : (user.roles || [userRole]);
   userObj.kycStatus = kycStatus;
   userObj.isKycVerified = isKycVerified;
-  userObj.hostApplicationStatus = userObj.hostApplicationStatus || 'NONE';
+  userObj.hostApplicationStatus = isUserAdmin ? 'APPROVED' : (userObj.hostApplicationStatus || 'NONE');
   userObj.hostApplicationDetails = userObj.hostApplicationDetails || {};
   userObj.kyc = {
     ...(userObj.kyc || {}),
@@ -59,12 +75,14 @@ const sendTokenResponse = (user, statusCode, res, message) => {
       user: {
         _id: user._id,
         id: user._id,
-        name: user.name,
-        fullName: user.fullName || user.name,
-        email: user.email,
-        phone: user.phone,
-        role: userRole,
-        roles: user.roles || [userRole],
+        username: userObj.username,
+        name: resolvedName,
+        fullName: resolvedFullName,
+        email: userObj.email,
+        phone: userObj.phone,
+        role: userObj.role,
+        roles: userObj.roles,
+        isPhoneVerified: userObj.isPhoneVerified ?? true,
         hostApplicationStatus: userObj.hostApplicationStatus,
         hostApplicationDetails: userObj.hostApplicationDetails,
         isKycVerified: isKycVerified,
@@ -98,14 +116,26 @@ export const register = async (req, res, next) => {
       return sendTokenResponse(existingUser, 200, res, 'User logged in successfully');
     }
 
-    const assignedRole = isMasterAdminPhone(phone) ? 'ADMIN' : (role || 'USER');
+    const isMaster = isMasterAdminPhone(phone) || (role && role.toUpperCase() === 'ADMIN');
+    const assignedRole = isMaster ? 'ADMIN' : (role || 'USER');
+    const defaultAdminName = 'Shubham';
+    const resolvedRegName = isMaster
+      ? (name && !name.startsWith('User') ? name : defaultAdminName)
+      : (name || `User ${phone.slice(-4)}`);
+
+    const uniqueSuffix = Date.now().toString().slice(-4) + Math.floor(100 + Math.random() * 900);
+    const generatedUsername = `user_${phone.replace(/\D/g, '').slice(-4)}_${uniqueSuffix}`;
+
     const user = await User.create({
-      name: name || `User ${phone.slice(-4)}`,
+      name: resolvedRegName,
+      fullName: resolvedRegName,
+      username: generatedUsername,
       email: email ? email.toLowerCase() : `${phone.replace(/\D/g, '')}@primedrew.com`,
       phone: phone.trim(),
       password: password || 'P2P_AUTH_PASS',
       role: assignedRole,
       roles: assignedRole === 'ADMIN' ? ['ADMIN', 'HOST', 'USER'] : [assignedRole],
+      isPhoneVerified: true,
       hostApplicationStatus: assignedRole === 'ADMIN' ? 'APPROVED' : 'NONE',
       kycStatus: assignedRole === 'ADMIN' ? 'verified' : 'pending',
       isKycVerified: assignedRole === 'ADMIN'
@@ -154,13 +184,25 @@ export const login = async (req, res, next) => {
       }
     }
 
-    if (isMasterAdminPhone(user.phone) && user.role !== 'ADMIN') {
-      user.role = 'ADMIN';
-      user.roles = ['ADMIN', 'HOST', 'USER'];
-      user.hostApplicationStatus = 'APPROVED';
-      user.isKycVerified = true;
-      user.kycStatus = 'verified';
-      await user.save();
+    const isMaster = isMasterAdminPhone(user.phone) || user.role === 'ADMIN' || user.role === 'admin';
+    if (isMaster) {
+      let needsSave = false;
+      if (user.role !== 'ADMIN') {
+        user.role = 'ADMIN';
+        user.roles = ['ADMIN', 'HOST', 'USER'];
+        user.hostApplicationStatus = 'APPROVED';
+        user.isKycVerified = true;
+        user.kycStatus = 'verified';
+        needsSave = true;
+      }
+      if (!user.name || user.name.startsWith('User ')) {
+        user.name = 'Shubham';
+        user.fullName = 'Shubham';
+        needsSave = true;
+      }
+      if (needsSave) {
+        await user.save();
+      }
     }
 
     const freshUser = await User.findById(user._id);
@@ -177,35 +219,71 @@ export const login = async (req, res, next) => {
  */
 export const verifyOTP = async (req, res, next) => {
   try {
-    const { phone, role = 'USER' } = req.body;
-    if (!phone) {
+    const phoneNumber = (req.body.phoneNumber || req.body.phone || '').toString().trim();
+    if (!phoneNumber) {
       return res.status(400).json({
         success: false,
         message: 'Phone number is required.'
       });
     }
 
-    const cleanPhone = phone.trim();
-    const isMaster = isMasterAdminPhone(cleanPhone);
-    let user = await User.findOne({ phone: cleanPhone });
+    const cleanNumber = phoneNumber.replace(/\D/g, '').slice(-10);
+    const isAdminTarget = phoneNumber === '7387861807' || cleanNumber === '7387861807' || isMasterAdminPhone(phoneNumber);
 
-    if (!user) {
-      user = await User.create({
-        phone: cleanPhone,
-        role: isMaster ? 'ADMIN' : (role || 'USER'),
-        roles: isMaster ? ['ADMIN', 'HOST', 'USER'] : [role || 'USER'],
-        hostApplicationStatus: isMaster ? 'APPROVED' : 'NONE',
-        kycStatus: isMaster ? 'verified' : 'pending',
-        isKycVerified: isMaster,
-        kyc: { status: isMaster ? 'verified' : 'pending' }
-      });
-    } else if (isMaster && user.role !== 'ADMIN') {
-      user.role = 'ADMIN';
-      user.roles = ['ADMIN', 'HOST', 'USER'];
-      user.hostApplicationStatus = 'APPROVED';
-      user.isKycVerified = true;
-      user.kycStatus = 'verified';
+    // 1. Instead of unconditionally calling User.create() or new User(), query by phone first:
+    let user = await User.findOne({
+      $or: [
+        { phone: phoneNumber },
+        ...(cleanNumber ? [{ phone: cleanNumber }, { phone: `+91${cleanNumber}` }] : [])
+      ]
+    });
+
+    if (user) {
+      // Existing user (including Admin) - DO NOT recreate or modify username!
+      user.isPhoneVerified = true;
+
+      // Ensure admin identity defaults correctly
+      if (
+        user.role === 'admin' ||
+        user.role === 'ADMIN' ||
+        user.role === 'superadmin' ||
+        user.role === 'SUPERADMIN' ||
+        isAdminTarget ||
+        phoneNumber === '7387861807'
+      ) {
+        user.role = 'admin';
+        user.roles = ['ADMIN', 'HOST', 'USER'];
+        user.hostApplicationStatus = 'APPROVED';
+        user.isKycVerified = true;
+        user.kycStatus = 'verified';
+        if (!user.kyc) user.kyc = { status: 'verified' };
+        else user.kyc.status = 'verified';
+
+        if (!user.name || user.name.startsWith('User')) {
+          user.name = 'Shubham';
+          user.fullName = 'Shubham';
+        }
+      }
       await user.save();
+    } else {
+      // Brand new user registration only
+      const uniqueSuffix = Date.now().toString().slice(-4) + Math.floor(100 + Math.random() * 900);
+      const generatedUsername = `user_${(cleanNumber || phoneNumber).slice(-4)}_${uniqueSuffix}`;
+      const isNewAdmin = isAdminTarget || phoneNumber === '7387861807';
+
+      user = await User.create({
+        phone: phoneNumber,
+        name: isNewAdmin ? 'Shubham' : `User ${(cleanNumber || phoneNumber).slice(-4)}`,
+        fullName: isNewAdmin ? 'Shubham' : `User ${(cleanNumber || phoneNumber).slice(-4)}`,
+        username: generatedUsername,
+        role: isNewAdmin ? 'admin' : (req.body.role || 'renter'),
+        roles: isNewAdmin ? ['ADMIN', 'HOST', 'USER'] : [req.body.role || 'renter'],
+        isPhoneVerified: true,
+        hostApplicationStatus: isNewAdmin ? 'APPROVED' : 'NONE',
+        kycStatus: isNewAdmin ? 'verified' : 'pending',
+        isKycVerified: isNewAdmin,
+        kyc: { status: isNewAdmin ? 'verified' : 'pending' }
+      });
     }
 
     sendTokenResponse(user, 200, res, 'Phone OTP verified successfully');
@@ -319,27 +397,50 @@ export const getMe = async (req, res, next) => {
     }
 
     // Auto-promote Master Admin phone number if needed
-    if (isMasterAdminPhone(user.phone) && user.role !== 'ADMIN') {
-      user.role = 'ADMIN';
-      user.roles = ['ADMIN', 'HOST', 'USER'];
-      user.hostApplicationStatus = 'APPROVED';
-      user.isKycVerified = true;
-      user.kycStatus = 'verified';
-      await user.save();
+    const isMaster = isMasterAdminPhone(user.phone) || user.role === 'ADMIN' || user.role === 'admin';
+    if (isMaster) {
+      let needsSave = false;
+      if (user.role !== 'ADMIN') {
+        user.role = 'ADMIN';
+        user.roles = ['ADMIN', 'HOST', 'USER'];
+        user.hostApplicationStatus = 'APPROVED';
+        user.isKycVerified = true;
+        user.kycStatus = 'verified';
+        needsSave = true;
+      }
+      if (!user.name || user.name.startsWith('User ')) {
+        user.name = 'Shubham';
+        user.fullName = 'Shubham';
+        needsSave = true;
+      }
+      if (needsSave) {
+        await user.save();
+      }
     }
 
     const userObj = user.toObject ? user.toObject() : { ...user };
     delete userObj.password;
 
-    const kycStatus = userObj.kycStatus || userObj.kyc?.status || 'pending';
-    const isKycVerified = userObj.isKycVerified || kycStatus === 'verified';
+    const userRole = user.role || user.roles?.[0] || 'USER';
+    const isUserAdmin = userRole.toUpperCase() === 'ADMIN' || userRole.toUpperCase() === 'SUPERADMIN' || isMaster;
+    const resolvedName = isUserAdmin
+      ? (userObj.name && !userObj.name.startsWith('User ') ? userObj.name : 'Shubham')
+      : (userObj.name || (userObj.phone ? `User ${userObj.phone.slice(-4)}` : 'User'));
+    const resolvedFullName = isUserAdmin
+      ? (userObj.fullName && !userObj.fullName.startsWith('User ') ? userObj.fullName : 'Shubham')
+      : (userObj.fullName || resolvedName);
+
+    const kycStatus = isUserAdmin ? 'verified' : (userObj.kycStatus || userObj.kyc?.status || 'pending');
+    const isKycVerified = isUserAdmin || userObj.isKycVerified || kycStatus === 'verified';
     userObj.id = user._id;
     userObj._id = user._id;
-    userObj.role = user.role || user.roles?.[0] || 'USER';
+    userObj.name = resolvedName;
+    userObj.fullName = resolvedFullName;
+    userObj.role = isUserAdmin ? 'ADMIN' : userRole;
+    userObj.roles = isUserAdmin ? ['ADMIN', 'HOST', 'USER'] : (user.roles || [userRole]);
     userObj.kycStatus = kycStatus;
     userObj.isKycVerified = isKycVerified;
-    userObj.fullName = userObj.fullName || userObj.name;
-    userObj.hostApplicationStatus = userObj.hostApplicationStatus || 'NONE';
+    userObj.hostApplicationStatus = isUserAdmin ? 'APPROVED' : (userObj.hostApplicationStatus || 'NONE');
     userObj.hostApplicationDetails = userObj.hostApplicationDetails || {};
     userObj.kyc = {
       ...(userObj.kyc || {}),

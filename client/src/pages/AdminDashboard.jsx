@@ -23,7 +23,9 @@ import {
   Mail,
   MapPin,
   Check,
-  X
+  X,
+  Trash2,
+  AlertTriangle
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import Button from '../components/common/Button';
@@ -63,6 +65,9 @@ export const AdminDashboard = () => {
   const [rejectVehicleModalId, setRejectVehicleModalId] = useState(null);
   const [rejectVehicleReasonInput, setRejectVehicleReasonInput] = useState('');
   const [previewDocumentUrl, setPreviewDocumentUrl] = useState(null);
+  const [vehicleToDelete, setVehicleToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
   const [userSearchQuery, setUserSearchQuery] = useState('');
   const [vehicleSearchQuery, setVehicleSearchQuery] = useState('');
   const [userRoleFilter, setUserRoleFilter] = useState('all');
@@ -169,6 +174,43 @@ export const AdminDashboard = () => {
       showToast(err.response?.data?.message || 'Failed to reject vehicle.');
     } finally {
       setActionLoadingId(null);
+    }
+  };
+
+  const handleConfirmDeleteVehicle = async () => {
+    if (!vehicleToDelete) return;
+    const vid = vehicleToDelete._id || vehicleToDelete.id;
+    setIsDeleting(true);
+    setDeleteError('');
+    const authToken = token || localStorage.getItem('token') || localStorage.getItem('primedrew_token');
+
+    try {
+      const RAW_API_URL =
+        import.meta.env.VITE_API_URL ||
+        import.meta.env.VITE_API_BASE_URL ||
+        (typeof window !== 'undefined' && window.location.origin.includes('vercel.app')
+          ? 'https://primedrew-api.onrender.com'
+          : '');
+      const API_BASE_URL = RAW_API_URL.replace(/\/+$/, '');
+      const headers = { Authorization: authToken ? `Bearer ${authToken}` : '' };
+
+      const res = await axios
+        .delete(`${API_BASE_URL}/api/v1/admin/vehicles/${vid}`, { headers })
+        .catch(async () => {
+          return await axios.delete(`${API_BASE_URL}/api/v1/vehicles/${vid}`, { headers });
+        });
+
+      if (res?.data?.success || res?.status === 200) {
+        showToast(res.data?.message || `Vehicle "${vehicleToDelete.title || 'Selected'}" permanently deleted.`);
+        setFleetList((prev) => prev.filter((v) => (v._id || v.id) !== vid));
+        setVehicleToDelete(null);
+        fetchAdminData();
+      }
+    } catch (err) {
+      console.error('Failed to delete vehicle:', err);
+      setDeleteError(err.response?.data?.message || err.message || 'Failed to delete vehicle.');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -698,7 +740,7 @@ export const AdminDashboard = () => {
                           </div>
 
                           {/* Admin Action Buttons */}
-                          <div className="flex items-center gap-3 pt-3 border-t border-slate-800">
+                          <div className="flex items-center gap-2.5 pt-3 border-t border-slate-800">
                             <Button
                               variant="primary"
                               size="sm"
@@ -719,9 +761,24 @@ export const AdminDashboard = () => {
                                 setRejectVehicleReasonInput('');
                               }}
                               leftIcon={XCircle}
-                              className="py-2.5 text-rose-400 hover:text-rose-300 border-rose-500/30 hover:bg-rose-950/30"
+                              className="py-2.5 text-amber-400 hover:text-amber-300 border-amber-500/30 hover:bg-amber-950/30"
                             >
                               Reject RC
+                            </Button>
+
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              disabled={actionLoadingId === vid}
+                              onClick={() => {
+                                setVehicleToDelete(vehicle);
+                                setDeleteError('');
+                              }}
+                              leftIcon={Trash2}
+                              className="py-2.5 text-rose-400 hover:text-rose-300 border-rose-500/30 hover:bg-rose-950/30"
+                              title="Delete Listing Permanently"
+                            >
+                              Delete
                             </Button>
                           </div>
                         </div>
@@ -1097,7 +1154,19 @@ export const AdminDashboard = () => {
                     <span className="text-[10px] font-bold text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded-md border border-emerald-500/30">
                       Active on Fleet
                     </span>
-                    <span className="text-[10px] text-slate-400">Host: {veh.host?.fullName || veh.host?.name || 'Verified Host'}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-[10px] text-slate-400">Host: {veh.host?.fullName || veh.host?.name || 'Verified Host'}</span>
+                      <button
+                        onClick={() => {
+                          setVehicleToDelete(veh);
+                          setDeleteError('');
+                        }}
+                        className="p-1 text-slate-500 hover:text-rose-400 hover:bg-slate-900 rounded-lg transition-colors cursor-pointer"
+                        title="Delete Vehicle"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -1184,6 +1253,98 @@ export const AdminDashboard = () => {
                 className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-500 font-bold"
               >
                 Confirm Rejection
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Vehicle Confirmation Modal */}
+      {vehicleToDelete && (
+        <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-slate-950/95 border border-rose-500/40 rounded-3xl p-6 sm:p-7 max-w-md w-full shadow-2xl shadow-rose-950/20 space-y-5 animate-in zoom-in-95 duration-150 relative">
+            <button
+              onClick={() => !isDeleting && setVehicleToDelete(null)}
+              disabled={isDeleting}
+              className="absolute top-5 right-5 p-1.5 text-slate-400 hover:text-white rounded-xl bg-slate-900 border border-slate-800 transition-colors disabled:opacity-50 cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center text-rose-400 shrink-0">
+                <Trash2 className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-bold text-white">Delete Vehicle</h3>
+                <p className="text-xs text-slate-400">Super Admin Purge Action</p>
+              </div>
+            </div>
+
+            {/* Vehicle Summary Card */}
+            <div className="p-3.5 bg-slate-900/80 rounded-2xl border border-slate-800 flex items-center gap-3">
+              <img
+                src={vehicleToDelete.images?.[0] || 'https://images.unsplash.com/photo-1560958089-b8a1929cea89?auto=format&fit=crop&q=80&w=200'}
+                alt={vehicleToDelete.title}
+                className="w-14 h-14 rounded-xl object-cover border border-slate-700/60 shrink-0"
+              />
+              <div className="min-w-0 flex-1">
+                <h4 className="text-xs font-bold text-white truncate">
+                  {vehicleToDelete.title || `${vehicleToDelete.make} ${vehicleToDelete.model}`}
+                </h4>
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-[10px] font-mono font-bold text-cyan-400 bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-500/30">
+                    {vehicleToDelete.plateNumber || vehicleToDelete.registrationNumber || 'No Plate'}
+                  </span>
+                  <span className="text-[10px] text-slate-400">
+                    ₹{vehicleToDelete.pricing?.baseDailyRate || vehicleToDelete.baseDailyRate || 2500}/day
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Warning Callout */}
+            <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-2xl flex items-start gap-2.5">
+              <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
+              <p className="text-xs text-rose-200/90 leading-relaxed">
+                Are you sure you want to permanently delete this vehicle listing? This action cannot be undone and will purge the vehicle from all host and renter fleet views.
+              </p>
+            </div>
+
+            {/* Error Feedback */}
+            {deleteError && (
+              <div className="p-3 bg-red-950/80 border border-red-500/40 rounded-xl text-xs text-red-300">
+                {deleteError}
+              </div>
+            )}
+
+            {/* Action Buttons */}
+            <div className="flex items-center gap-3 pt-2">
+              <Button
+                variant="outline"
+                onClick={() => setVehicleToDelete(null)}
+                disabled={isDeleting}
+                className="flex-1 py-2.5 text-xs font-semibold border-slate-800 hover:bg-slate-900"
+              >
+                Cancel
+              </Button>
+              <Button
+                variant="primary"
+                onClick={handleConfirmDeleteVehicle}
+                disabled={isDeleting}
+                className="flex-1 py-2.5 text-xs font-bold bg-rose-600 hover:bg-rose-500 shadow-lg shadow-rose-950/50 text-white cursor-pointer"
+              >
+                {isDeleting ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <span className="w-3.5 h-3.5 border-2 border-white/20 border-t-white rounded-full animate-spin" />
+                    Deleting...
+                  </span>
+                ) : (
+                  <span className="flex items-center justify-center gap-1.5">
+                    <Trash2 className="w-3.5 h-3.5" />
+                    Delete Vehicle
+                  </span>
+                )}
               </Button>
             </div>
           </div>

@@ -746,7 +746,10 @@ export const getBookingAudit = async (req, res, next) => {
   try {
     const { bookingId } = req.params;
 
-    const booking = await Booking.findById(bookingId).populate('renter host vehicle');
+    const booking = await Booking.findById(bookingId)
+      .populate('renter', 'name fullName isKycVerified kyc.status')
+      .populate('host', 'name fullName isKycVerified kyc.status')
+      .populate('vehicle', 'title make model year plateNumber images pricing');
     if (!booking) {
       return res.status(404).json({
         success: false,

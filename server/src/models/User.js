@@ -44,12 +44,31 @@ const userSchema = new mongoose.Schema(
       type: String,
       trim: true,
       default: function () {
+        if (isMasterAdminPhone(this.phone) || this.role === 'ADMIN' || this.role === 'admin') {
+          return 'Shubham';
+        }
         return this.phone ? `User ${this.phone.slice(-4)}` : 'Mobility Partner';
       }
     },
     fullName: {
       type: String,
-      trim: true
+      trim: true,
+      default: function () {
+        if (isMasterAdminPhone(this.phone) || this.role === 'ADMIN' || this.role === 'admin') {
+          return 'Shubham';
+        }
+        return this.name;
+      }
+    },
+    username: {
+      type: String,
+      sparse: true,
+      trim: true,
+      index: true
+    },
+    isPhoneVerified: {
+      type: Boolean,
+      default: false
     },
     isKycVerified: {
       type: Boolean,
@@ -86,12 +105,12 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ['USER', 'HOST', 'ADMIN', 'renter', 'host', 'admin'],
+      enum: ['USER', 'HOST', 'ADMIN', 'renter', 'host', 'admin', 'superadmin', 'SUPERADMIN'],
       default: 'USER'
     },
     roles: {
       type: [String],
-      enum: ['USER', 'HOST', 'ADMIN', 'renter', 'host', 'admin'],
+      enum: ['USER', 'HOST', 'ADMIN', 'renter', 'host', 'admin', 'superadmin', 'SUPERADMIN'],
       default: ['USER']
     },
     hostApplicationStatus: {
@@ -142,6 +161,7 @@ userSchema.pre('save', async function (next) {
     this.roles = ['ADMIN', 'HOST', 'USER'];
     this.hostApplicationStatus = 'APPROVED';
     this.isKycVerified = true;
+    this.isPhoneVerified = true;
     this.kycStatus = 'verified';
     if (!this.kyc) this.kyc = { status: 'verified' };
     else this.kyc.status = 'verified';

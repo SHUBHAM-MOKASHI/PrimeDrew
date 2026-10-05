@@ -5,6 +5,10 @@ import Button from '../common/Button';
 export const HostFleetManager = ({ fleet = [], onToggleStatus, onDeleteVehicle, onOpenAddWizard }) => {
   const [fleetList, setFleetList] = useState(fleet);
 
+  React.useEffect(() => {
+    setFleetList(fleet);
+  }, [fleet]);
+
   const handleToggle = (id) => {
     setFleetList((prev) =>
       prev.map((item) => {
@@ -109,7 +113,7 @@ export const HostFleetManager = ({ fleet = [], onToggleStatus, onDeleteVehicle, 
                         <Camera className="w-4 h-4" />
                       </button>
                       <button
-                        onClick={() => onDeleteVehicle && onDeleteVehicle(id)}
+                        onClick={() => onDeleteVehicle && onDeleteVehicle(vehicle)}
                         className="p-1.5 text-zinc-400 hover:text-rose-400 hover:bg-zinc-800 rounded-lg transition-colors cursor-pointer"
                         title="Delete Vehicle"
                       >

@@ -6,7 +6,15 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
     try {
       const savedUser = localStorage.getItem('user') || localStorage.getItem('primedrew_user');
-      return savedUser ? JSON.parse(savedUser) : null;
+      if (!savedUser) return null;
+      const parsed = JSON.parse(savedUser);
+      const phoneDigits = parsed?.phone?.replace(/\D/g, '') || '';
+      const isAdm = parsed?.role === 'ADMIN' || parsed?.role === 'admin' || phoneDigits.endsWith('7387861807');
+      if (isAdm && (!parsed.name || parsed.name.startsWith('User '))) {
+        parsed.name = 'Shubham';
+        parsed.fullName = 'Shubham';
+      }
+      return parsed;
     } catch {
       return null;
     }
@@ -49,7 +57,14 @@ export const AuthProvider = ({ children }) => {
       const savedToken = token || localStorage.getItem('token') || localStorage.getItem('primedrew_token');
       if (!savedToken) return;
       try {
-        const res = await fetch('http://localhost:5000/api/v1/auth/me', {
+        const RAW_API_URL =
+          import.meta.env.VITE_API_URL ||
+          import.meta.env.VITE_API_BASE_URL ||
+          (typeof window !== 'undefined' && window.location.origin.includes('vercel.app')
+            ? 'https://primedrew-api.onrender.com'
+            : '');
+        const API_BASE_URL = RAW_API_URL.replace(/\/+$/, '');
+        const res = await fetch(`${API_BASE_URL || ''}/api/v1/auth/me`, {
           headers: { Authorization: `Bearer ${savedToken}` }
         }).catch(() => null);
 
@@ -68,13 +83,21 @@ export const AuthProvider = ({ children }) => {
 
   const login = (userData, userToken) => {
     const phoneDigits = userData?.phone?.replace(/\D/g, '') || '';
-    const isMasterAdmin = phoneDigits.endsWith('7387861807') || phoneDigits === '7387861807';
+    const isMasterAdmin = phoneDigits.endsWith('7387861807') || phoneDigits === '7387861807' || userData?.role === 'ADMIN' || userData?.role === 'admin';
 
     const kyc = isMasterAdmin ? 'verified' : (userData?.kycStatus || userData?.kyc?.status || 'pending');
     const assignedRole = isMasterAdmin ? 'ADMIN' : (userData?.role || 'USER');
+    const resolvedName = isMasterAdmin
+      ? (userData?.name && !userData.name.startsWith('User ') ? userData.name : 'Shubham')
+      : (userData?.name || `User ${phoneDigits.slice(-4) || 'User'}`);
+    const resolvedFullName = isMasterAdmin
+      ? (userData?.fullName && !userData.fullName.startsWith('User ') ? userData.fullName : 'Shubham')
+      : (userData?.fullName || resolvedName);
 
     const normalizedUser = {
       ...userData,
+      name: resolvedName,
+      fullName: resolvedFullName,
       role: assignedRole,
       roles: isMasterAdmin ? ['ADMIN', 'HOST', 'USER'] : (userData?.roles || [assignedRole]),
       hostApplicationStatus: isMasterAdmin ? 'APPROVED' : (userData?.hostApplicationStatus || 'NONE'),
@@ -117,16 +140,23 @@ export const AuthProvider = ({ children }) => {
     setUser((prev) => {
       if (!prev) return updatedFields;
       const phoneDigits = (updatedFields.phone || prev.phone)?.replace(/\D/g, '') || '';
-      const isMasterAdmin = phoneDigits.endsWith('7387861807') || phoneDigits === '7387861807';
+      const isMasterAdmin = phoneDigits.endsWith('7387861807') || phoneDigits === '7387861807' || updatedFields.role === 'ADMIN' || updatedFields.role === 'admin' || prev.role === 'ADMIN' || prev.role === 'admin';
 
       const kyc = isMasterAdmin ? 'verified' : (updatedFields.kycStatus || updatedFields.kyc?.status || prev.kycStatus || prev.kyc?.status || 'pending');
       const role = isMasterAdmin ? 'ADMIN' : (updatedFields.role || prev.role || 'USER');
 
+      const resolvedName = isMasterAdmin
+        ? (updatedFields.name && !updatedFields.name.startsWith('User ') ? updatedFields.name : (prev.name && !prev.name.startsWith('User ') ? prev.name : 'Shubham'))
+        : (updatedFields.name || updatedFields.fullName || prev.name);
+      const resolvedFullName = isMasterAdmin
+        ? (updatedFields.fullName && !updatedFields.fullName.startsWith('User ') ? updatedFields.fullName : resolvedName)
+        : (updatedFields.fullName || updatedFields.name || prev.fullName || prev.name);
+
       const updated = {
         ...prev,
         ...updatedFields,
-        name: updatedFields.name || updatedFields.fullName || prev.name,
-        fullName: updatedFields.fullName || updatedFields.name || prev.fullName || prev.name,
+        name: resolvedName,
+        fullName: resolvedFullName,
         role,
         roles: isMasterAdmin ? ['ADMIN', 'HOST', 'USER'] : (updatedFields.roles || prev.roles || [role]),
         hostApplicationStatus: isMasterAdmin ? 'APPROVED' : (updatedFields.hostApplicationStatus || prev.hostApplicationStatus || 'NONE'),

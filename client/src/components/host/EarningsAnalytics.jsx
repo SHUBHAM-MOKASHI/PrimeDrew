@@ -1,43 +1,63 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { DollarSign, ShieldCheck, Clock, CheckCircle2, ArrowUpRight } from 'lucide-react';
+import { getHostBookings } from '../../services/bookingService';
+import { useAuth } from '../../context/AuthContext';
 
 export const EarningsAnalytics = () => {
-  const earningsData = {
-    gross: 54000,
-    platformFee: 5400, // 10%
-    netPayout: 48600,
-    pendingEscrow: 9240
-  };
+  const { token } = useAuth();
+  const [payouts, setPayouts] = useState([]);
+  const [earningsData, setEarningsData] = useState({
+    gross: 0,
+    platformFee: 0,
+    netPayout: 0,
+    pendingEscrow: 0
+  });
 
-  const payouts = [
-    {
-      id: 'po_101',
-      bookingId: 'bk_9812',
-      vehicle: 'Tesla Model 3 Performance',
-      date: '20 Aug 2026',
-      amount: 11340,
-      status: 'Transferred to Bank',
-      utr: 'UTR-9821-2026'
-    },
-    {
-      id: 'po_102',
-      bookingId: 'bk_9855',
-      vehicle: 'Mahindra Thar 4x4',
-      date: '15 Aug 2026',
-      amount: 8640,
-      status: 'Transferred to Bank',
-      utr: 'UTR-9822-2026'
-    },
-    {
-      id: 'po_103',
-      bookingId: 'bk_9901',
-      vehicle: 'Tesla Model 3 Performance',
-      date: '24 Aug 2026',
-      amount: 9240,
-      status: 'Pending Escrow Hold',
-      utr: 'Pending Trip Completion'
-    }
-  ];
+  useEffect(() => {
+    const fetchEarnings = async () => {
+      if (!token) return;
+      try {
+        const res = await getHostBookings(token);
+        const bookings = res?.data || (Array.isArray(res) ? res : []);
+        if (Array.isArray(bookings) && bookings.length > 0) {
+          let gross = 0;
+          let pendingEscrow = 0;
+          let netPayout = 0;
+          const mapped = bookings.map((b, i) => {
+            const amount = b.totalPayout || b.pricingBreakdown?.totalAmount || 0;
+            gross += amount;
+            if (b.tripStatus === 'completed') {
+              netPayout += Math.round(amount * 0.9);
+            } else {
+              pendingEscrow += amount;
+            }
+            return {
+              id: b._id || b.id || `po_${i}`,
+              bookingId: b._id || b.id || `bk_${i}`,
+              vehicle: b.vehicle?.title || b.vehicleTitle || 'Booked Vehicle',
+              date: b.dates || (b.createdAt ? new Date(b.createdAt).toLocaleDateString() : 'Recent'),
+              amount: amount,
+              status: b.tripStatus === 'completed' ? 'Transferred to Bank' : 'Pending Escrow Hold',
+              utr: b.tripStatus === 'completed' ? `UTR-${b._id?.slice(-4) || '2026'}` : 'Pending Completion'
+            };
+          });
+          setPayouts(mapped);
+          setEarningsData({
+            gross,
+            platformFee: Math.round(gross * 0.1),
+            netPayout,
+            pendingEscrow
+          });
+        } else {
+          setPayouts([]);
+          setEarningsData({ gross: 0, platformFee: 0, netPayout: 0, pendingEscrow: 0 });
+        }
+      } catch {
+        setPayouts([]);
+      }
+    };
+    fetchEarnings();
+  }, [token]);
 
   return (
     <div className="space-y-6">
@@ -92,28 +112,36 @@ export const EarningsAnalytics = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-zinc-800 text-xs">
-              {payouts.map((po) => (
-                <tr key={po.id} className="hover:bg-zinc-800/40 transition-colors">
-                  <td className="p-3 font-mono font-bold text-zinc-300">{po.id}</td>
-                  <td className="p-3">
-                    <span className="font-bold text-zinc-100 block">{po.vehicle}</span>
-                    <span className="text-[11px] text-zinc-500 font-mono">{po.bookingId}</span>
-                  </td>
-                  <td className="p-3 text-zinc-400 font-semibold">{po.date}</td>
-                  <td className="p-3 font-extrabold text-zinc-100 font-mono">₹{po.amount}</td>
-                  <td className="p-3 text-right">
-                    {po.status === 'Transferred to Bank' ? (
-                      <span className="bg-emerald-950/80 text-emerald-400 border border-emerald-500/30 text-[11px] font-semibold px-2.5 py-0.5 rounded-full inline-flex items-center gap-1 shadow-xs">
-                        <CheckCircle2 className="w-3 h-3 text-emerald-400" /> Settled ({po.utr})
-                      </span>
-                    ) : (
-                      <span className="bg-amber-950/80 text-amber-400 border border-amber-500/30 text-[11px] font-semibold px-2.5 py-0.5 rounded-full inline-flex items-center gap-1">
-                        <Clock className="w-3 h-3 text-amber-400" /> Escrow Hold
-                      </span>
-                    )}
+              {payouts.length === 0 ? (
+                <tr>
+                  <td colSpan="5" className="p-8 text-center text-zinc-500 font-medium">
+                    No completed trips or payouts yet. Payouts will automatically settle here after trip completions.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                payouts.map((po) => (
+                  <tr key={po.id} className="hover:bg-zinc-800/40 transition-colors">
+                    <td className="p-3 font-mono font-bold text-zinc-300">{po.id}</td>
+                    <td className="p-3">
+                      <span className="font-bold text-zinc-100 block">{po.vehicle}</span>
+                      <span className="text-[11px] text-zinc-500 font-mono">{po.bookingId}</span>
+                    </td>
+                    <td className="p-3 text-zinc-400 font-semibold">{po.date}</td>
+                    <td className="p-3 font-extrabold text-zinc-100 font-mono">₹{po.amount}</td>
+                    <td className="p-3 text-right">
+                      {po.status === 'Transferred to Bank' ? (
+                        <span className="bg-emerald-950/80 text-emerald-400 border border-emerald-500/30 text-[11px] font-semibold px-2.5 py-0.5 rounded-full inline-flex items-center gap-1 shadow-xs">
+                          <CheckCircle2 className="w-3 h-3 text-emerald-400" /> Settled ({po.utr})
+                        </span>
+                      ) : (
+                        <span className="bg-amber-950/80 text-amber-400 border border-amber-500/30 text-[11px] font-semibold px-2.5 py-0.5 rounded-full inline-flex items-center gap-1">
+                          <Clock className="w-3 h-3 text-amber-400" /> Escrow Hold
+                        </span>
+                      )}
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

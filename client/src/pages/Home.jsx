@@ -1,65 +1,43 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ShieldCheck, Zap, Star, ChevronRight, Sparkles } from 'lucide-react';
+import { Zap, ChevronRight, Sparkles } from 'lucide-react';
 import Button from '../components/common/Button';
 import ThreeM4Experience from '../components/home/ThreeM4Experience';
 import BookingCheckoutDrawer from '../components/booking/BookingCheckoutDrawer';
 import ErrorBoundary from '../components/common/ErrorBoundary';
+import StaggeredGrid from '../components/StaggeredGrid';
 import { useAuth } from '../context/AuthContext';
+import { getVehicles } from '../services/vehicleService';
 
 export const Home = () => {
   const navigate = useNavigate();
   const { user, token, kycStatus, openAuthModal, openKycModal } = useAuth();
+  const [vehicles, setVehicles] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [selectedVehicle, setSelectedVehicle] = useState(null);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
 
-  const categories = [
-    { name: 'SUVs & Cruisers', tag: 'Spacious & All-Terrain', count: '120+ Vehicles', image: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&q=80&w=600', query: 'SUV' },
-    { name: 'Electric Fleet (EV)', tag: 'Zero Emissions, Tech Ready', count: '85+ Vehicles', image: 'https://images.unsplash.com/photo-1560958089-b8a1929cea89?auto=format&fit=crop&q=80&w=600', query: 'EV' },
-    { name: 'Executive Sedans', tag: 'Comfort & Business Class', count: '140+ Vehicles', image: 'https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&q=80&w=600', query: 'Sedan' },
-    { name: 'Superbikes & Scooters', tag: 'Agile Urban Mobility', count: '90+ Vehicles', image: 'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&q=80&w=600', query: 'Bike' }
-  ];
+  useEffect(() => {
+    const fetchHomeFleet = async () => {
+      try {
+        const response = await getVehicles();
+        const liveList = response?.data || (Array.isArray(response) ? response : []);
+        setVehicles(Array.isArray(liveList) ? liveList : []);
+      } catch (err) {
+        console.error('[Home] Failed to load live fleet:', err);
+        setVehicles([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchHomeFleet();
+  }, []);
 
-  const featuredFleet = [
-    {
-      id: 'v1',
-      title: 'Tesla Model 3 Performance',
-      category: 'EV',
-      rating: 4.98,
-      reviews: 42,
-      hourlyRate: 350,
-      dailyRate: 4200,
-      hostName: 'Rahul S.',
-      isVerified: true,
-      image: 'https://images.unsplash.com/photo-1560958089-b8a1929cea89?auto=format&fit=crop&q=80&w=600',
-      specs: 'Automatic • EV • 5 Seats'
-    },
-    {
-      id: 'v2',
-      title: 'Mahindra Thar 4x4 Convertible',
-      category: 'SUV',
-      rating: 4.91,
-      reviews: 68,
-      hourlyRate: 280,
-      dailyRate: 3200,
-      hostName: 'Priya K.',
-      isVerified: true,
-      image: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&q=80&w=600',
-      specs: 'Manual • Diesel • 4 Seats'
-    },
-    {
-      id: 'v3',
-      title: 'BMW 3 Series M Sport',
-      category: 'Luxury',
-      rating: 4.99,
-      reviews: 31,
-      hourlyRate: 550,
-      dailyRate: 6500,
-      hostName: 'Anand V.',
-      isVerified: true,
-      image: 'https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&q=80&w=600',
-      specs: 'Automatic • Petrol • 5 Seats'
-    }
+  const categories = [
+    { name: 'SUVs & Cruisers', tag: 'Spacious & All-Terrain', count: 'Explore All', image: 'https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?auto=format&fit=crop&q=80&w=600', query: 'SUV' },
+    { name: 'Electric Fleet (EV)', tag: 'Zero Emissions, Tech Ready', count: 'Explore All', image: 'https://images.unsplash.com/photo-1560958089-b8a1929cea89?auto=format&fit=crop&q=80&w=600', query: 'EV' },
+    { name: 'Executive Sedans', tag: 'Comfort & Business Class', count: 'Explore All', image: 'https://images.unsplash.com/photo-1555215695-3004980ad54e?auto=format&fit=crop&q=80&w=600', query: 'Sedan' },
+    { name: 'Superbikes & Scooters', tag: 'Agile Urban Mobility', count: 'Explore All', image: 'https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&q=80&w=600', query: 'Bike' }
   ];
 
   const handleBookClick = (e, vehicle) => {
@@ -92,6 +70,52 @@ export const Home = () => {
     });
     setIsCheckoutOpen(true);
   };
+
+  // --- Staggered Grid Dynamic Fleet Transformation ---
+  const activeFleet = vehicles;
+
+  // Map real vehicles from MongoDB to StaggeredGrid Bento Items
+  const bentoItems = activeFleet.length > 0
+    ? activeFleet.slice(0, 4).map((car, idx) => {
+        const dailyPrice = Number(car.pricing?.baseDailyRate || car.baseDailyRate || car.dailyRate || 0);
+        const carImage = car.images?.[0] || car.image || 'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=600&q=80';
+        return {
+          id: car._id || car.id || `bento-${idx}`,
+          title: car.title || `${car.make || ''} ${car.model || ''}`.trim() || 'Verified Vehicle',
+          subtitle: car.category || (dailyPrice ? `₹${dailyPrice.toLocaleString()}/day` : 'Exotic Fleet'),
+          description: car.tagline || (typeof car.specs === 'string' ? car.specs : `${car.specs?.transmission || 'Automatic'} • ${car.specs?.fuelType || 'Petrol'} • ${car.specs?.seats || 5} Seats`),
+          icon: <span className="text-xs font-bold text-sky-400">{dailyPrice ? `₹${dailyPrice.toLocaleString()}/day` : 'Available'}</span>,
+          image: carImage,
+          onClick: (e) => {
+            if (car._id || car.id) {
+              navigate(`/vehicles/${car._id || car.id}`);
+            } else if (typeof handleBookClick === 'function') {
+              handleBookClick(e || { stopPropagation: () => {} }, car);
+            }
+          }
+        };
+      })
+    : [
+        {
+          id: 'list-vehicle-callout',
+          title: 'Host Your Vehicle on PrimeDrew',
+          subtitle: 'Zero Listing Fees • Verified Renters',
+          description: 'Earn up to ₹45,000/month with automated AI damage inspection & smart escrow lock.',
+          icon: <span className="text-xs font-bold text-cyan-400">+ List Vehicle</span>,
+          image: 'https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?auto=format&fit=crop&w=800&q=80',
+          onClick: () => navigate('/host/list-vehicle')
+        }
+      ];
+
+  // Collect real fleet images for background grid flow
+  const extractedImages = activeFleet.map((v) => v.images?.[0] || v.image).filter(Boolean);
+  const gridImages = extractedImages.length >= 4 ? extractedImages : [
+    'https://images.unsplash.com/photo-1617814076367-b759c7d7e738?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1614162692292-7ac56d7f7f1e?auto=format&fit=crop&w=800&q=80',
+    'https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=600&q=80',
+    'https://images.unsplash.com/photo-1542282088-72c9c27ed0cd?auto=format&fit=crop&w=600&q=80'
+  ];
+  // ----------------------------------------------------
 
   return (
     <div className="flex flex-col min-h-screen bg-gradient-to-b from-[#030712] via-[#080d1a] to-[#020617] text-slate-100">
@@ -159,80 +183,15 @@ export const Home = () => {
         </div>
       </section>
 
-      {/* Featured Fleet Section */}
-      <section className="py-16 relative">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-10">
-            <div>
-              <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-950/60 border border-blue-500/30 text-blue-400 text-xs font-semibold uppercase tracking-wider mb-2">
-                <Zap className="w-3.5 h-3.5" />
-                Featured Listings
-              </div>
-              <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-                Top Verified <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-cyan-400 to-indigo-400">Listings</span>
-              </h2>
-              <p className="text-xs sm:text-sm text-slate-400 mt-1">Biometrically pre-screened vehicles ready for instant keyless unlock</p>
-            </div>
-            <button
-              onClick={() => navigate('/vehicles')}
-              className="self-start sm:self-auto bg-slate-900/80 border border-slate-700 text-slate-200 hover:text-white hover:border-blue-500 hover:bg-blue-950/40 transition-all text-xs font-semibold px-4 py-2 rounded-full backdrop-blur-md inline-flex items-center gap-1.5 cursor-pointer shadow-md"
-            >
-              <span>Browse Vehicles</span>
-              <ChevronRight className="w-3.5 h-3.5 text-blue-400" />
-            </button>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {featuredFleet.map((v) => (
-              <div
-                key={v.id}
-                className="bg-slate-900/80 border border-slate-800/90 rounded-3xl overflow-hidden backdrop-blur-2xl shadow-xl shadow-black/60 transition-all duration-300 hover:border-blue-500/50 hover:shadow-2xl hover:shadow-blue-950/40 hover:-translate-y-1.5 p-4 flex flex-col group cursor-pointer"
-                onClick={() => navigate(`/vehicles/${v.id}`)}
-              >
-                <div className="relative h-52 overflow-hidden rounded-2xl bg-slate-950">
-                  <img
-                    src={v.image}
-                    alt={v.title}
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-slate-950/70 via-transparent to-transparent pointer-events-none" />
-                  <span className="absolute top-3 right-3 bg-emerald-950/70 border border-emerald-500/40 text-emerald-400 text-[11px] font-bold px-3 py-1 rounded-full backdrop-blur-md shadow-sm inline-flex items-center gap-1">
-                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" /> Verified Host
-                  </span>
-                </div>
-                <div className="pt-4 pb-2 px-1 flex-1 flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-[10px] uppercase font-extrabold tracking-wider text-cyan-400 bg-cyan-950/60 px-2.5 py-0.5 rounded-md border border-cyan-500/30">
-                        {v.category}
-                      </span>
-                      <span className="text-xs font-semibold text-slate-300 flex items-center gap-1">
-                        <Star className="w-3.5 h-3.5 fill-amber-400 text-amber-400" /> {v.rating} ({v.reviews})
-                      </span>
-                    </div>
-                    <h3 className="text-base font-bold text-white mt-2 line-clamp-1 group-hover:text-cyan-400 transition-colors">
-                      {v.title}
-                    </h3>
-                    <p className="text-xs text-slate-400 mt-1">{v.specs}</p>
-                  </div>
-
-                  <div className="pt-4 mt-4 border-t border-slate-800 flex items-center justify-between">
-                    <div>
-                      <span className="text-2xl font-black text-white">₹{v.dailyRate}</span>
-                      <span className="text-xs text-slate-400"> / day</span>
-                    </div>
-                    <button
-                      onClick={(e) => handleBookClick(e, v)}
-                      className="bg-gradient-to-r from-blue-600 via-blue-500 to-cyan-500 hover:from-blue-500 hover:to-cyan-400 text-white font-bold text-xs px-4 py-2 shadow-lg shadow-blue-600/30 rounded-xl active:scale-95 transition-all cursor-pointer"
-                    >
-                      Book Vehicle
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
+      {/* Interactive GSAP Staggered Bento Grid Fleet Section */}
+      {/* Staggered Grid Dynamic Fleet Section */}
+      <section id="fleet" className="w-full py-16 bg-neutral-950 relative overflow-hidden">
+        <StaggeredGrid 
+          bentoItems={bentoItems} 
+          centerText="PRIME FLEET" 
+          images={gridImages} 
+          showFooter={false} 
+        />
       </section>
 
       {/* Trust & AI Security Feature Section */}

@@ -1,4 +1,5 @@
 import Vehicle from '../models/Vehicle.js';
+import { isMasterAdminPhone } from '../models/User.js';
 import { crossValidateDocument } from '../utils/docValidator.js';
 import { uploadToCloudinary } from '../config/cloudinary.js';
 
@@ -148,13 +149,13 @@ export const createVehicle = async (req, res, next) => {
       images: vehicleImages,
       rcDocument: finalRcDoc,
       documents: documents || { rcFrontUrl: rcDocUrl },
-      verificationStatus: 'pending',
+      verificationStatus: 'approved',
       status: 'available'
     });
 
     res.status(201).json({
       success: true,
-      message: 'Vehicle listing created successfully. Sent to Admin Verification Desk for RC clearance.',
+      message: 'Vehicle listing created successfully and published to marketplace.',
       crossValidation: {
         nameMatchScore: crossValResult.nameMatchScore,
         isFlaggedForReview: crossValResult.isFlaggedForReview,
@@ -169,7 +170,7 @@ export const createVehicle = async (req, res, next) => {
 
 /**
  * @desc    Get all vehicles with optional filters & geospatial search
- * @route   GET /api/v1/vehicles
+ * @route   GET /api/v1/vehicles & GET /api/vehicles
  * @access  Public
  */
 export const getAllVehicles = async (req, res, next) => {
@@ -178,6 +179,7 @@ export const getAllVehicles = async (req, res, next) => {
       category,
       transmission,
       fuelType,
+      seats,
       minPrice,
       maxPrice,
       lat,
@@ -187,15 +189,6 @@ export const getAllVehicles = async (req, res, next) => {
       verificationStatus
     } = req.query;
 
-    const isInternalQuery = Boolean(req.user && (req.user.roles?.includes('ADMIN') || req.user.roles?.includes('HOST') || req.user.role === 'ADMIN'));
-
-    // Public users only see APPROVED vehicles
-    const targetVerification = verificationStatus
-      ? verificationStatus.toLowerCase()
-      : isInternalQuery
-      ? undefined
-      : 'approved';
-
     // Geospatial search using MongoDB $geoNear aggregation
     if (lat && lng) {
       const latitude = parseFloat(lat);
@@ -203,14 +196,14 @@ export const getAllVehicles = async (req, res, next) => {
       const maxDistanceMeters = parseFloat(radius) * 1000;
 
       const geoMatch = {};
-      if (category) geoMatch.category = category;
-      if (transmission) geoMatch['specs.transmission'] = transmission;
-      if (fuelType) geoMatch['specs.fuelType'] = fuelType;
+      if (category && category !== 'All') geoMatch.category = category;
+      if (transmission && transmission !== 'All') geoMatch['specs.transmission'] = transmission;
+      if (fuelType && fuelType !== 'All') geoMatch['specs.fuelType'] = fuelType;
       if (status) geoMatch.status = status;
-      else geoMatch.status = 'available';
+      else geoMatch.status = { $in: ['available', 'Available', 'approved', 'Approved', 'active', 'rented'] };
 
-      if (targetVerification) {
-        geoMatch.verificationStatus = { $regex: new RegExp(`^${targetVerification}$`, 'i') };
+      if (verificationStatus) {
+        geoMatch.verificationStatus = { $regex: new RegExp(`^${verificationStatus}$`, 'i') };
       }
 
       if (minPrice || maxPrice) {
@@ -260,17 +253,33 @@ export const getAllVehicles = async (req, res, next) => {
       });
     }
 
-    // Standard Query Search
+    // Direct MongoDB Vehicle Collection Query Filter
     const query = {};
 
-    if (category) query.category = category;
-    if (transmission) query['specs.transmission'] = transmission;
-    if (fuelType) query['specs.fuelType'] = fuelType;
-    if (status) query.status = status;
-    else query.status = 'available';
+    if (category && category !== 'All' && category !== 'all') {
+      query.category = { $regex: new RegExp(`^${category}$`, 'i') };
+    }
+    if (transmission && transmission !== 'All') {
+      query['specs.transmission'] = { $regex: new RegExp(`^${transmission}$`, 'i') };
+    }
+    if (fuelType && fuelType !== 'All') {
+      query['specs.fuelType'] = { $regex: new RegExp(`^${fuelType}$`, 'i') };
+    }
+    if (seats && seats !== 'Any') {
+      const seatsNum = parseInt(seats, 10);
+      if (!isNaN(seatsNum)) {
+        query['specs.seats'] = seatsNum;
+      }
+    }
 
-    if (targetVerification) {
-      query.verificationStatus = { $regex: new RegExp(`^${targetVerification}$`, 'i') };
+    if (status) {
+      query.status = status;
+    } else {
+      query.status = { $in: ['available', 'Available', 'approved', 'Approved', 'active', 'rented'] };
+    }
+
+    if (verificationStatus) {
+      query.verificationStatus = { $regex: new RegExp(`^${verificationStatus}$`, 'i') };
     }
 
     if (minPrice || maxPrice) {
@@ -280,10 +289,10 @@ export const getAllVehicles = async (req, res, next) => {
     }
 
     const vehicles = await Vehicle.find(query)
-      .populate('host', 'name email phone kyc.status')
+      .populate('host', 'name fullName isKycVerified kyc.status createdAt phone')
       .sort({ createdAt: -1 });
 
-    res.status(200).json({
+    return res.status(200).json({
       success: true,
       count: vehicles.length,
       data: vehicles
@@ -302,7 +311,7 @@ export const getVehicleById = async (req, res, next) => {
   try {
     const vehicle = await Vehicle.findById(req.params.id).populate(
       'host',
-      'name email phone kyc.status createdAt'
+      'name fullName isKycVerified kyc.status createdAt'
     );
 
     if (!vehicle) {
@@ -378,8 +387,11 @@ export const deleteVehicle = async (req, res, next) => {
       });
     }
 
-    const isHostOwner = vehicle.host.toString() === req.user._id.toString();
-    const isAdmin = req.user.roles.includes('admin');
+    const isHostOwner = vehicle.host && vehicle.host.toString() === req.user._id.toString();
+    const isAdmin = isMasterAdminPhone(req.user.phone) ||
+      req.user.role === 'ADMIN' ||
+      req.user.role === 'admin' ||
+      (req.user.roles || []).map((r) => r.toUpperCase()).includes('ADMIN');
 
     if (!isHostOwner && !isAdmin) {
       return res.status(403).json({
@@ -392,7 +404,7 @@ export const deleteVehicle = async (req, res, next) => {
 
     res.status(200).json({
       success: true,
-      message: 'Vehicle deleted successfully.'
+      message: `Vehicle ${vehicle.title || ''} deleted successfully.`
     });
   } catch (error) {
     next(error);

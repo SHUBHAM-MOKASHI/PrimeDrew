@@ -65,17 +65,18 @@ export const Navbar = () => {
 
   const isVerified = user?.kycStatus === 'verified' || kycStatus === 'verified' || user?.isKycVerified || isAdmin;
 
-  const effectiveName =
-    (user?.fullName && !user.fullName.startsWith('User ') ? user.fullName : null) ||
-    (user?.name && !user.name.startsWith('User ') ? user.name : null) ||
-    user?.kycDetails?.extractedData?.name ||
-    user?.fullName ||
-    user?.name ||
-    (user?.phone ? `User ${user.phone.slice(-4)}` : 'Mobility Partner');
+  const isUserAdmin = isAdmin || user?.role === 'admin' || user?.role === 'ADMIN' || user?.role === 'superadmin' || user?.roles?.some(r => (typeof r === 'string' ? r.toUpperCase() : '') === 'ADMIN');
 
-  const displayFirstName = effectiveName.startsWith('User ')
+  const displayName = isUserAdmin
+    ? "Shubham"
+    : ((user?.fullName && !user.fullName.startsWith('User ') ? user.fullName : null) ||
+       (user?.name && !user.name.startsWith('User ') ? user.name : null) ||
+       user?.kycDetails?.extractedData?.name ||
+       (user?.phone ? `User ${user.phone.slice(-4)}` : 'User'));
+
+  const displayFirstName = displayName.startsWith('User ')
     ? (user?.phone ? user.phone.slice(-4) : 'User')
-    : effectiveName.split(' ')[0];
+    : displayName.split(' ')[0];
 
   useEffect(() => {
     if (user?.name) {
@@ -302,10 +303,10 @@ export const Navbar = () => {
                 <div className={`w-6 h-6 rounded-lg text-white font-bold text-xs flex items-center justify-center ${
                   isAdmin ? 'bg-gradient-to-tr from-amber-500 to-indigo-600' : 'bg-gradient-to-tr from-cyan-500 to-blue-600'
                 }`}>
-                  {effectiveName[0].toUpperCase()}
+                  {isAdmin ? 'U' : (displayName[0]?.toUpperCase() || 'U')}
                 </div>
                 <span className="text-xs font-bold hidden lg:inline max-w-[120px] truncate">
-                  {effectiveName}
+                  {displayName}
                 </span>
                 <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
               </button>
@@ -335,10 +336,10 @@ export const Navbar = () => {
                       </div>
                     ) : (
                       <div className="flex items-center justify-between group">
-                        <p className="text-xs font-bold text-white truncate max-w-[170px]">{effectiveName}</p>
+                        <p className="text-xs font-bold text-white truncate max-w-[170px]">{displayName}</p>
                         <button
                           onClick={() => {
-                            setCustomNameInput(effectiveName.startsWith('User ') ? '' : effectiveName);
+                            setCustomNameInput(displayName.startsWith('User ') ? '' : displayName);
                             setIsEditingName(true);
                           }}
                           className="text-slate-500 hover:text-cyan-400 p-0.5 cursor-pointer"
